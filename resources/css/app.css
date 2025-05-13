@@ -5,3 +5,19 @@
 body {
     font-family: 'Arial', sans-serif;
 }
+
+/* app.css */
+.header-transparent {
+    background-color: transparent;
+    transition: background-color .3s, box-shadow .3s;
+  }
+  .header-solid {
+    @apply bg-red-600 shadow-lg;
+  }
+  
+  .carousel-caption {
+    bottom: 20%;
+  }
+  .carousel-caption h2 {
+    @apply text-4xl md:text-6xl font-extrabold;
+  }
