@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IngredienteController as AdminIngredienteController;
 use App\Http\Controllers\Admin\ProductoController    as AdminProductoController;
 use App\Http\Controllers\Admin\OrderController       as AdminOrderController;
+use App\Http\Controllers\ProfileController;
 
 // Rutas públicas
 Route::get('/', fn() => view('home'))->name('home');
@@ -61,4 +62,14 @@ Route::prefix('admin')
         // Pedidos (solo index, show y update)
         Route::resource('orders', AdminOrderController::class)
             ->only(['index', 'show', 'update']);
+    });
+
+    Route::middleware('auth')->group(function(){
+        // Perfil de usuario
+        Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    
+        // Dashboard admin (sólo admin)
+        Route::get('/admin/dashboard', [DashboardController::class, 'index'])
+             ->name('admin.dashboard')
+             ->middleware('admin');
     });
