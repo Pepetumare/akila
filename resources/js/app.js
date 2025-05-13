@@ -4,97 +4,56 @@ import focus from '@alpinejs/focus';
 window.Alpine = Alpine;
 Alpine.plugin(focus);
 
-Alpine.data('ingredienteModal', () => ({
-    // Estados de los modales
-    showCreateModal: false,
-    showEditModal: false,
-    showDeleteModal: false,
-
-    // Propiedades para editar
-    editAction: '',
-    editNombre: '',
-    editTipo: '',
-    editCosto: '',
-
-    // Propiedades para eliminar
-    deleteAction: '',
-    deleteName: '',
-
-    // Abre el modal de crear
-    openCreate() {
-        this.showCreateModal = true;
-        console.log('openCreate ejecutado');
-        // opcional: limpiar campos de creación
-    },
-    closeCreate() {
-        this.showCreateModal = false;
-        // opcional: reset createNombre/createTipo/createCosto
-    },
-
-    // Abre el modal de editar y puebla los campos
-    openEdit(id, nombre, tipo, costo) {
-        this.editAction = `/admin/ingredientes/${id}`;
-        this.editNombre = nombre;
-        this.editTipo = tipo;
-        this.editCosto = costo;
-        this.showEditModal = true;
-        this.$nextTick(() => {
-            const input = this.$el.querySelector('#edit_nombre');
-            if (input) input.focus();
-        });
-    },
-    closeEdit() {
-        this.showEditModal = false;
-        this.editAction = '';
-        this.editNombre = '';
-        this.editTipo = '';
-        this.editCosto = '';
-    },
-
-    // Abre el modal de confirmación de eliminación
-    openDelete(id, nombre) {
-        this.deleteAction = `/admin/ingredientes/${id}`;
-        this.deleteName = nombre;
-        this.showDeleteModal = true;
-    },
-    closeDelete() {
-        this.showDeleteModal = false;
-        this.deleteAction = '';
-        this.deleteName = '';
-    },
-}));
-
 document.addEventListener('alpine:init', () => {
-    Alpine.data('categoryModal', () => ({
+    // Ingredientes
+    Alpine.data('ingredienteModal', () => ({
+        // Estados de los modales
         showCreateModal: false,
         showEditModal: false,
         showDeleteModal: false,
+
+        // Propiedades para editar
+        editAction: '',
+        editNombre: '',
+        editTipo: '',
+        editCosto: '',
+
+        // Propiedades para eliminar
         deleteAction: '',
         deleteName: '',
-        createNombre: '',
-        editNombre: '',
-        editAction: '',
+
+        // Abre el modal de crear
         openCreate() {
             this.showCreateModal = true;
-            this.$nextTick(() => this.$el.querySelector('#create_nombre').focus());
+            console.log('openCreate ejecutado');
         },
         closeCreate() {
             this.showCreateModal = false;
-            this.createNombre = '';
         },
-        openEdit(id, nombre) {
-            this.editAction = '/admin/categorias/' + id;
+
+        // Abre el modal de editar y puebla los campos
+        openEdit(id, nombre, tipo, costo) {
+            this.editAction = `/admin/ingredientes/${id}`;
             this.editNombre = nombre;
+            this.editTipo = tipo;
+            this.editCosto = costo;
             this.showEditModal = true;
-            this.$nextTick(() => this.$el.querySelector('#edit_nombre').focus());
+            this.$nextTick(() => {
+                const input = this.$el.querySelector('#edit_nombre');
+                if (input) input.focus();
+            });
         },
         closeEdit() {
             this.showEditModal = false;
-            this.editNombre = '';
             this.editAction = '';
+            this.editNombre = '';
+            this.editTipo = '';
+            this.editCosto = '';
         },
+
+        // Abre el modal de confirmación de eliminación
         openDelete(id, nombre) {
-            this.deleteAction = '/admin/categorias/' + id;
+            this.deleteAction = `/admin/ingredientes/${id}`;
             this.deleteName = nombre;
             this.showDeleteModal = true;
         },
@@ -104,39 +63,87 @@ document.addEventListener('alpine:init', () => {
             this.deleteName = '';
         },
     }));
+
+    // Categorías
+    Alpine.data('categoryModal', () => ({
+        showCreateModal: false,
+        showEditModal: false,
+        showDeleteModal: false,
+
+        createNombre: '',
+        editAction: '',
+        editNombre: '',
+        deleteAction: '',
+        deleteName: '',
+
+        openCreate() {
+            this.showCreateModal = true;
+            this.$nextTick(() => this.$el.querySelector('#create_nombre') ? .focus());
+        },
+        closeCreate() {
+            this.showCreateModal = false;
+            this.createNombre = '';
+        },
+
+        openEdit(id, nombre) {
+            this.editAction = `/admin/categorias/${id}`;
+            this.editNombre = nombre;
+            this.showEditModal = true;
+            this.$nextTick(() => this.$el.querySelector('#edit_nombre') ? .focus());
+        },
+        closeEdit() {
+            this.showEditModal = false;
+            this.editAction = '';
+            this.editNombre = '';
+        },
+
+        openDelete(id, nombre) {
+            this.deleteAction = `/admin/categorias/${id}`;
+            this.deleteName = nombre;
+            this.showDeleteModal = true;
+        },
+        closeDelete() {
+            this.showDeleteModal = false;
+            this.deleteAction = '';
+            this.deleteName = '';
+        },
+    }));
+
+    // Productos
+    Alpine.data('productModal', () => ({
+        activeModal: null,
+        editAction: '',
+        deleteAction: '',
+        deleteName: '',
+
+        openCreate() {
+            this.activeModal = 'create';
+            this.$nextTick(() => this.$el.querySelector('#create_nombre') ? .focus());
+        },
+        openEdit(id, nombre, categoriaId, precio, personalizable) {
+            this.editAction = `/admin/productos/${id}`;
+            this.activeModal = 'edit';
+            // pre-llenado: asume que tu form usa x-model o x-ref en cada campo
+            this.$nextTick(() => {
+                const nameInput = this.$el.querySelector('#edit_nombre');
+                if (nameInput) nameInput.value = nombre;
+            });
+        },
+        openDelete(id, nombre) {
+            this.deleteAction = `/admin/productos/${id}`;
+            this.deleteName = nombre;
+            this.activeModal = 'delete';
+        },
+        closeModal() {
+            this.activeModal = null;
+            this.editAction = '';
+            this.deleteAction = '';
+            this.deleteName = '';
+        },
+    }));
 });
 
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('productModal', () => ({
-            activeModal: null,
-            editAction: '',
-            deleteAction: '',
-            deleteName: '',
-
-            openCreate() {
-                this.activeModal = 'create';
-            },
-            openEdit(id, nombre) {
-                this.editAction = `/admin/productos/${id}`;
-                this.activeModal = 'edit';
-                // precarga nombre en el input si usas x-ref en tu partial:
-                this.$nextTick(() => this.$refs.nombre && (this.$refs.nombre.value = nombre));
-            },
-            openDelete(id, nombre) {
-                this.deleteAction = `/admin/productos/${id}`;
-                this.deleteName = nombre;
-                this.activeModal = 'delete';
-            },
-            closeModal() {
-                this.activeModal = null;
-                this.editAction = '';
-                this.deleteAction = '';
-                this.deleteName = '';
-            },
-        }));
-    });
 Alpine.start();
-console.log('Alpine iniciado v' + Alpine.version);
 
 
 // resources/js/app.js
