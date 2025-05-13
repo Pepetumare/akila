@@ -78,7 +78,7 @@ document.addEventListener('alpine:init', () => {
 
         openCreate() {
             this.showCreateModal = true;
-            this.$nextTick(() => this.$el.querySelector('#create_nombre') ? .focus());
+            this.$nextTick(() => this.$el.querySelector('#create_nombre')?.focus());
         },
         closeCreate() {
             this.showCreateModal = false;
@@ -89,7 +89,7 @@ document.addEventListener('alpine:init', () => {
             this.editAction = `/admin/categorias/${id}`;
             this.editNombre = nombre;
             this.showEditModal = true;
-            this.$nextTick(() => this.$el.querySelector('#edit_nombre') ? .focus());
+            this.$nextTick(() => this.$el.querySelector('#edit_nombre')?.focus());
         },
         closeEdit() {
             this.showEditModal = false;
@@ -118,7 +118,7 @@ document.addEventListener('alpine:init', () => {
 
         openCreate() {
             this.activeModal = 'create';
-            this.$nextTick(() => this.$el.querySelector('#create_nombre') ? .focus());
+            this.$nextTick(() => this.$el.querySelector('#create_nombre')?.focus());
         },
         openEdit(id, nombre, categoriaId, precio, personalizable) {
             this.editAction = `/admin/productos/${id}`;
