@@ -51,7 +51,7 @@
                     <a href="{{ route('login') }}" class="hover:underline">Ingresar</a>
                     <a href="{{ route('register') }}" class="hover:underline">Registrarse</a>
                 @else
-                    <a href="{{ route('dashboard') }}" class="hover:underline">Mi Cuenta</a>
+                    <a href="{{ route('profile') }}" class="hover:underline">Mi Cuenta</a>
                 @endguest
             </nav>
 
