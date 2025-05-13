@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" x-data="adminLayout()" class="h-full bg-gray-100" x-cloak>
+<html lang="es" class="h-full bg-gray-100" x-cloak>
 
 <head>
     <meta charset="UTF-8">
@@ -10,7 +10,23 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body class="min-h-screen">
+<body x-data="{ sidebarOpen: false }" class="min-h-screen">
+
+    {{-- Botón hamburguesa (móvil) --}}
+    <button @click="sidebarOpen = !sidebarOpen"
+            class="md:hidden p-2 m-2 rounded bg-red-600 text-white focus:outline-none"
+            aria-label="Abrir menú">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="h-6 w-6"
+             fill="none"
+             viewBox="0 0 24 24"
+             stroke="currentColor">
+            <path stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+    </button>
 
     {{-- Sidebar --}}
     <aside
@@ -130,12 +146,6 @@
 
     {{-- Inicialización de gráficas; sólo si la vista las necesita --}}
     @stack('scripts')
-
-    {{-- AlpineJS layout helper --}}
-    <script>
-        function adminLayout() {
-            return { sidebarOpen: false };
-        }
-    </script>
+    <script src="//unpkg.com/alpinejs" defer></script>
 </body>
 </html>

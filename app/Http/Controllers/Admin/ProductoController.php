@@ -11,11 +11,23 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $productos = Producto::with('categoria')->orderBy('nombre')->get();
-        return view('admin.productos.index', compact('productos'));
+        $query = Producto::query();
+
+        if ($q = $request->input('q')) {
+            $query->where('nombre', 'like', "%{$q}%");
+        }
+
+        $productos = $query->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->appends($request->only('q'));
+
+        $categorias = Categoria::pluck('nombre', 'id');
+
+        return view('admin.productos.index', compact('productos', 'categorias'));
     }
+
 
     public function create()
     {
@@ -37,31 +49,31 @@ class ProductoController extends Controller
             'swappables'     => 'nullable|array',
             'swappables.*'   => 'exists:ingredientes,id',
         ]);
-    
+
         // Convertir a booleano
         $data['personalizable'] = (bool) $data['personalizable'];
-    
+
         // Subir imagen si viene
         if ($request->hasFile('imagen')) {
             $data['imagen'] = $request->file('imagen')
-                                  ->store('productos','public');
+                ->store('productos', 'public');
         }
-    
+
         // Crear producto y obtener instancia
         $producto = Producto::create($data);
-    
+
         // Gestionar “A tu pinta”
         if ($producto->categoria->slug === 'a-tu-pinta') {
             $producto->swappables()->sync($request->input('swappables', []));
         } else {
             $producto->swappables()->detach();
         }
-    
+
         return redirect()
             ->route('admin.productos.index')
-            ->with('success','Producto creado correctamente.');
+            ->with('success', 'Producto creado correctamente.');
     }
-    
+
     public function edit(Producto $producto)
     {
         $categorias = Categoria::orderBy('nombre')->pluck('nombre', 'id');
@@ -82,10 +94,10 @@ class ProductoController extends Controller
             'swappables'     => 'nullable|array',
             'swappables.*'   => 'exists:ingredientes,id',
         ]);
-    
+
         // Convertir personalizable a booleano
         $data['personalizable'] = (bool) $data['personalizable'];
-    
+
         // Manejar imagen nueva
         if ($request->hasFile('imagen')) {
             // Eliminar imagen anterior si existe
@@ -94,22 +106,22 @@ class ProductoController extends Controller
             }
             // Subir la nueva
             $data['imagen'] = $request->file('imagen')
-                                   ->store('productos','public');
+                ->store('productos', 'public');
         }
-    
+
         // Actualizar datos del producto
         $producto->update($data);
-    
+
         // Gestionar “A tu pinta”
         if ($producto->categoria->slug === 'a-tu-pinta') {
             $producto->swappables()->sync($request->input('swappables', []));
         } else {
             $producto->swappables()->detach();
         }
-    
+
         return redirect()
             ->route('admin.productos.index')
-            ->with('success','Producto actualizado correctamente.');
+            ->with('success', 'Producto actualizado correctamente.');
     }
 
     public function destroy(Producto $producto)
