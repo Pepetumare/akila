@@ -144,8 +144,9 @@
     {{-- Chart.js desde CDN --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    {{-- Inicialización de gráficas; sólo si la vista las necesita --}}
+
+    {{-- Aquí van tus scripts inyectados con @push('scripts') --}}
     @stack('scripts')
-    <script src="//unpkg.com/alpinejs" defer></script>
 </body>
+
 </html>

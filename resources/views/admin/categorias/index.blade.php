@@ -173,47 +173,4 @@
 @endsection
 
 @push('scripts')
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('categoryModal', () => ({
-                showCreateModal: false,
-                showEditModal: false,
-                showDeleteModal: false,
-                deleteAction: '',
-                deleteName: '',
-                createNombre: '',
-                editNombre: '',
-                editAction: '',
-                openCreate() {
-                    this.showCreateModal = true;
-                    this.$nextTick(() => this.$el.querySelector('#create_nombre').focus());
-                },
-                closeCreate() {
-                    this.showCreateModal = false;
-                    this.createNombre = '';
-                },
-                openEdit(id, nombre) {
-                    this.editAction = '/admin/categorias/' + id;
-                    this.editNombre = nombre;
-                    this.showEditModal = true;
-                    this.$nextTick(() => this.$el.querySelector('#edit_nombre').focus());
-                },
-                closeEdit() {
-                    this.showEditModal = false;
-                    this.editNombre = '';
-                    this.editAction = '';
-                },
-                openDelete(id, nombre) {
-                    this.deleteAction = '/admin/categorias/' + id;
-                    this.deleteName = nombre;
-                    this.showDeleteModal = true;
-                },
-                closeDelete() {
-                    this.showDeleteModal = false;
-                    this.deleteAction = '';
-                    this.deleteName = '';
-                },
-            }));
-        });
-    </script>
 @endpush
