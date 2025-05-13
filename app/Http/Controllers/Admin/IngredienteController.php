@@ -9,9 +9,11 @@ use Illuminate\Http\Request;
 
 class IngredienteController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $ingredientes = Ingrediente::orderBy('nombre')->get();
+        $ingredientes = Ingrediente::orderBy('created_at', 'desc')
+                       ->paginate(10)       // 10 por página (ajústalo a tu gusto)
+                       ->appends($request->only('q'));
         return view('admin.ingredientes.index', compact('ingredientes'));
     }
 
