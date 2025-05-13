@@ -78,7 +78,7 @@
                     <a href="{{ route('login') }}" class="block hover:underline">Ingresar</a>
                     <a href="{{ route('register') }}" class="block hover:underline">Registrarse</a>
                 @else
-                    <a href="{{ route('dashboard') }}" class="block hover:underline">Mi Cuenta</a>
+                    <a href="{{ route('profile') }}" class="block hover:underline">Mi Cuenta</a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="w-full text-left hover:underline">Cerrar Sesión</button>
