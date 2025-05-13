@@ -34,6 +34,7 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return $this->is_admin;
+        // Forzamos a bool, incluso si el atributo es null:
+        return (bool) $this->is_admin;
     }
 }
