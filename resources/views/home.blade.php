@@ -16,7 +16,7 @@
             <!-- Slides -->
             <div class="carousel-inner">
                 <div class="carousel-item active">
-                    <img src="{{ asset('img/slide1.jpg') }}" class="d-block w-100" alt="Slide 1">
+                    <img src="{{ asset('img/slide1.png') }}" class="d-block w-100" alt="Slide 1">
                     <div class="carousel-caption d-none d-md-block">
                         <h2 class="display-5 fw-bold">Bienvenido a Sushi Akila</h2>
                         <p>Descubre nuestros sabores únicos</p>
@@ -24,7 +24,7 @@
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <img src="{{ asset('img/slide2.jpg') }}" class="d-block w-100" alt="Slide 2">
+                    <img src="{{ asset('img/slide2.png') }}" class="d-block w-100" alt="Slide 2">
                     <div class="carousel-caption d-none d-md-block">
                         <h2 class="display-5 fw-bold">Promociones Especiales</h2>
                         <p>2×1 en Hand Rolls todos los martes</p>
@@ -32,7 +32,7 @@
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <img src="{{ asset('img/slide3.jpg') }}" class="d-block w-100" alt="Slide 3">
+                    <img src="{{ asset('img/slide3.png') }}" class="d-block w-100" alt="Slide 3">
                     <div class="carousel-caption d-none d-md-block">
                         <h2 class="display-5 fw-bold">Calidad y Frescura</h2>
                         <p>Ingredientes seleccionados para ti</p>

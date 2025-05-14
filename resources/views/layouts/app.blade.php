@@ -8,8 +8,12 @@
     <title>@yield('title') – Sushi Akila</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     {{-- Bootstrap CSS CDN --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-…" crossorigin="anonymous">
+    {{-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-…" crossorigin="anonymous"> --}}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+
+
 </head>
 
 <body class="flex flex-col min-h-screen">
@@ -18,8 +22,7 @@
     <header class="bg-red-600 text-white shadow-md">
         <div class="container mx-auto flex items-center justify-between p-4">
             <a href="{{ route('home') }}" class="flex items-center">
-                <img src="{{ asset('images/logo.png') }}" alt="Sushi Akila" class="h-8 w-auto mr-2">
-                <span class="text-xl font-bold">Sushi Akila</span>
+                <img src="{{ asset('img/logo/logo-light-transparent.png') }}" alt="Sushi Akila" class="h-8 w-auto mr-2">
             </a>
 
             {{-- Desktop Nav --}}
@@ -129,8 +132,10 @@
     </footer>
 
     {{-- Bootstrap JS Bundle --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous">
+    </script>
+
 
     @vite('resources/js/app.js')
     <script src="//unpkg.com/alpinejs" defer></script>
