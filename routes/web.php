@@ -14,62 +14,48 @@ use App\Http\Controllers\ProfileController;
 // Rutas públicas
 Route::get('/', fn() => view('home'))->name('home');
 
-Route::get('/menu', [ProductoController::class, 'index'])
-    ->name('menu');
+Route::get('/menu', [ProductoController::class, 'index'])->name('menu');
 
-Route::get('/producto/{id}', [ProductoController::class, 'show'])
-    ->name('producto.show');
+Route::get('/producto/{id}', [ProductoController::class, 'show'])->name('producto.show');
 
 // Carrito
-Route::post('/cart/add',    [CartController::class, 'add'])->name('cart.add');
-Route::get('/cart',        [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
-Route::post('/cart/clear',  [CartController::class, 'clear'])->name('cart.clear');
+Route::post('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
 
 // Checkout
-Route::get('/checkout',                   [CheckoutController::class, 'index'])->name('checkout.index');
-Route::post('/checkout',                   [CheckoutController::class, 'store'])->name('checkout.store');
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 Route::get('/checkout/thank-you/{order}', [CheckoutController::class, 'thankYou'])->name('checkout.thankyou');
-// Descarga de boleta
-Route::get('/boleta/{order}', [CheckoutController::class, 'download'])
-    ->name('checkout.download');
+Route::get('/boleta/{order}', [CheckoutController::class, 'download'])->name('checkout.download');
 
-// Rutas de autenticación (login, register, etc.)
+// Autenticación
 require __DIR__ . '/auth.php';
 
-// Ruta /dashboard para redireccionar tras login
-Route::get('dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])
-    ->name('dashboard');
-
+// Panel administrativo protegido (Prefijo admin)
 Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'admin'])
     ->group(function () {
 
-        // Dashboard
-        Route::get('dashboard', [DashboardController::class, 'index'])
-            ->name('dashboard');
+        // Dashboard Admin
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         // Categorías
-        Route::resource('categorias',   AdminCategoriaController::class);
+        Route::resource('categorias', AdminCategoriaController::class);
 
         // Ingredientes
         Route::resource('ingredientes', AdminIngredienteController::class);
 
-        // Productos
-        Route::resource('productos',    AdminProductoController::class);
+        // Productos (Aquí está tu controlador AdminProductoController)
+        Route::resource('productos', AdminProductoController::class);
 
-        // Pedidos (solo index, show y update)
-        Route::resource('orders', AdminOrderController::class)
-            ->only(['index', 'show', 'update']);
+        // Pedidos
+        Route::resource('orders', AdminOrderController::class)->only(['index', 'show', 'update']);
     });
 
-    Route::middleware('auth')->group(function(){
-        // Perfil de usuario
-        Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
-    
-        // Dashboard admin (sólo admin)
-        Route::get('/admin/dashboard', [DashboardController::class, 'index'])
-             ->name('admin.dashboard')
-             ->middleware('admin');
-    });
+// Perfil usuario común
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+});

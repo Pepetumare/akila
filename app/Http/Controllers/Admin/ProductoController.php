@@ -1,11 +1,11 @@
 <?php
-// app/Http/Controllers/Admin/ProductoController.php
 
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Producto;
 use App\Models\Categoria;
+use App\Models\Ingrediente;      // 👈 Importamos Ingrediente
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -23,51 +23,55 @@ class ProductoController extends Controller
             ->paginate(10)
             ->appends($request->only('q'));
 
-        $categorias = Categoria::pluck('nombre', 'id');
+        $categorias = Categoria::pluck('nombre', 'id')
+        ->map(fn ($nombre) => str_replace('\\', ' / ', $nombre));
 
-        return view('admin.productos.index', compact('productos', 'categorias'));
+        $ingredientes = Ingrediente::orderBy('nombre')->get();
+
+        return view('admin.productos.index', compact('productos', 'categorias', 'ingredientes'));
     }
-
 
     public function create()
     {
-        $categorias = Categoria::orderBy('nombre')->pluck('nombre', 'id');
-        return view('admin.productos.create', compact('categorias'));
+        $categorias  = Categoria::orderBy('nombre')->pluck('nombre', 'id');
+        $ingredientes = Ingrediente::orderBy('nombre')->get(); // 👈 Lista de ingredientes
+
+        return view('admin.productos.create', compact('categorias', 'ingredientes'));
     }
 
     public function store(Request $request)
     {
         // Validación
         $data = $request->validate([
-            'nombre'         => 'required|string',
-            'descripcion'    => 'nullable|string',
-            'precio'         => 'required|numeric|min:0',
-            'categoria_id'   => 'required|exists:categorias,id',
-            'imagen'         => 'nullable|image|max:2048',
-            'personalizable' => 'required|in:0,1',
-            'unidades'       => 'required|integer|min:1',
-            'swappables'     => 'nullable|array',
-            'swappables.*'   => 'exists:ingredientes,id',
+            'nombre'               => 'required|string',
+            'descripcion'          => 'nullable|string',
+            'precio'               => 'required|numeric|min:0',
+            'categoria_id'         => 'required|exists:categorias,id',
+            'imagen'               => 'nullable|image|max:2048',
+            'personalizable'       => 'required|in:0,1',
+            'unidades'             => 'required|integer|min:1',
+            'ingredientes'         => 'nullable|array',
+            'ingredientes.*'       => 'exists:ingredientes,id',
+            'cantidad_permitida'   => 'nullable|array',
+            'cantidad_permitida.*' => 'integer|min:1',
         ]);
 
-        // Convertir a booleano
         $data['personalizable'] = (bool) $data['personalizable'];
 
-        // Subir imagen si viene
         if ($request->hasFile('imagen')) {
-            $data['imagen'] = $request->file('imagen')
-                ->store('productos', 'public');
+            $data['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
-        // Crear producto y obtener instancia
         $producto = Producto::create($data);
 
-        // Gestionar “A tu pinta”
-        if ($producto->categoria->slug === 'a-tu-pinta') {
-            $producto->swappables()->sync($request->input('swappables', []));
-        } else {
-            $producto->swappables()->detach();
+        // Sincronizar ingredientes con pivot cantidad_permitida
+        $syncData = [];
+        foreach ($request->input('ingredientes', []) as $id) {
+            $syncData[$id] = [
+                'cantidad_permitida' => $request->input("cantidad_permitida.{$id}", 1)
+            ];
         }
+        $producto->ingredientes()->sync($syncData);
 
         return redirect()
             ->route('admin.productos.index')
@@ -76,48 +80,50 @@ class ProductoController extends Controller
 
     public function edit(Producto $producto)
     {
-        $categorias = Categoria::orderBy('nombre')->pluck('nombre', 'id');
-        return view('admin.productos.edit', compact('producto', 'categorias'));
+        dd($producto);
+        $categorias   = Categoria::orderBy('nombre')->pluck('nombre', 'id');
+        $ingredientes = Ingrediente::orderBy('nombre')->get();
+
+        return view('admin.productos.edit', compact('producto', 'categorias', 'ingredientes'));
     }
+
 
     public function update(Request $request, Producto $producto)
     {
-        // Validación
+        // Validación (igual que en store)
         $data = $request->validate([
-            'nombre'         => 'required|string',
-            'descripcion'    => 'nullable|string',
-            'precio'         => 'required|numeric|min:0',
-            'categoria_id'   => 'required|exists:categorias,id',
-            'imagen'         => 'nullable|image|max:2048',
-            'personalizable' => 'required|in:0,1',
-            'unidades'       => 'required|integer|min:1',
-            'swappables'     => 'nullable|array',
-            'swappables.*'   => 'exists:ingredientes,id',
+            'nombre'               => 'required|string',
+            'descripcion'          => 'nullable|string',
+            'precio'               => 'required|numeric|min:0',
+            'categoria_id'         => 'required|exists:categorias,id',
+            'imagen'               => 'nullable|image|max:2048',
+            'personalizable'       => 'required|in:0,1',
+            'unidades'             => 'required|integer|min:1',
+            'ingredientes'         => 'nullable|array',
+            'ingredientes.*'       => 'exists:ingredientes,id',
+            'cantidad_permitida'   => 'nullable|array',
+            'cantidad_permitida.*' => 'integer|min:1',
         ]);
 
-        // Convertir personalizable a booleano
         $data['personalizable'] = (bool) $data['personalizable'];
 
-        // Manejar imagen nueva
         if ($request->hasFile('imagen')) {
-            // Eliminar imagen anterior si existe
             if ($producto->imagen) {
                 Storage::disk('public')->delete($producto->imagen);
             }
-            // Subir la nueva
-            $data['imagen'] = $request->file('imagen')
-                ->store('productos', 'public');
+            $data['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
-        // Actualizar datos del producto
         $producto->update($data);
 
-        // Gestionar “A tu pinta”
-        if ($producto->categoria->slug === 'a-tu-pinta') {
-            $producto->swappables()->sync($request->input('swappables', []));
-        } else {
-            $producto->swappables()->detach();
+        // Sincronizar ingredientes con pivot cantidad_permitida
+        $syncData = [];
+        foreach ($request->input('ingredientes', []) as $id) {
+            $syncData[$id] = [
+                'cantidad_permitida' => $request->input("cantidad_permitida.{$id}", 1)
+            ];
         }
+        $producto->ingredientes()->sync($syncData);
 
         return redirect()
             ->route('admin.productos.index')
@@ -126,7 +132,6 @@ class ProductoController extends Controller
 
     public function destroy(Producto $producto)
     {
-        // Borra imagen si existe
         if ($producto->imagen) {
             Storage::disk('public')->delete($producto->imagen);
         }

@@ -63,6 +63,12 @@
                 </div>
             </div>
         @endfor
+        @foreach ($producto->ingredientes as $ingrediente)
+            <div class="chip-ingrediente" data-id="{{ $ingrediente->id }}" data-precio="{{ $ingrediente->precio }}"
+                data-repite="{{ $ingrediente->pivot->cantidad_permitida ?? 1 }}">
+                {{ $ingrediente->nombre }}
+            </div>
+        @endforeach
 
         <!-- Precio total -->
         <div class="mb-4">

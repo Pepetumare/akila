@@ -14,4 +14,11 @@ class Ingrediente extends Model
         'tipo',    // 'base' o 'extra'
         'costo',   // nullable para tipo 'base'
     ];
+
+    public function productos()
+    {
+        return $this->belongsToMany(Producto::class)
+                    ->withPivot('cantidad_permitida')
+                    ->withTimestamps();
+    }    
 }

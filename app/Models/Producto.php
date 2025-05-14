@@ -3,11 +3,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class Producto extends Model
 {
+    use HasFactory;
+
     protected $table = 'productos';
 
     protected $fillable = [
@@ -17,17 +20,24 @@ class Producto extends Model
         'imagen',
         'categoria_id',
         'personalizable',
-        'unidades'
+        'unidades',
+        // 'slug' si quieres asignarlo masivamente
     ];
 
-    // Para generar un slug si quisieras
+    protected $casts = [
+        'personalizable' => 'boolean',
+    ];
+
+    // Generar slug automáticamente
     public static function boot()
     {
         parent::boot();
-        static::creating(function($p){
+
+        static::creating(function ($p) {
             $p->slug = Str::slug($p->nombre);
         });
-        static::updating(function($p){
+
+        static::updating(function ($p) {
             $p->slug = Str::slug($p->nombre);
         });
     }
@@ -38,11 +48,23 @@ class Producto extends Model
         return $this->belongsTo(Categoria::class);
     }
 
+    // Relación muchos a muchos con Ingredientes (con cantidad_permitida)
+    public function ingredientes()
+    {
+        return $this->belongsToMany(Ingrediente::class, 'ingrediente_producto')
+                    ->withPivot('cantidad_permitida')
+                    ->withTimestamps();
+    }
+
+    // Relación “swappables” (opcionalmente podrías incluir pivot/timestamps)
     public function swappables()
     {
         return $this->belongsToMany(
             Ingrediente::class,
             'producto_swappable_ingredient'
-        );
+        )
+        // ->withPivot('cantidad_permitida') 
+        // ->withTimestamps()
+        ;
     }
 }

@@ -3,11 +3,10 @@
 <div class="mb-4">
     <label for="nombre" class="block font-medium">Nombre</label>
     <input
-        x-ref="nombre"
+        x-model="form.nombre"
         type="text"
         name="nombre"
         id="nombre"
-        value="{{ old('nombre', $producto->nombre ?? '') }}"
         class="border p-2 w-full"
         required
     >
@@ -19,12 +18,12 @@
 <div class="mb-4">
     <label for="descripcion" class="block font-medium">Descripción</label>
     <textarea
-        x-ref="descripcion"
+        x-model="form.descripcion"
         name="descripcion"
         id="descripcion"
         class="border p-2 w-full"
         rows="3"
-    >{{ old('descripcion', $producto->descripcion ?? '') }}</textarea>
+    ></textarea>
     @error('descripcion')
         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
     @enderror
@@ -33,11 +32,10 @@
 <div class="mb-4">
     <label for="precio" class="block font-medium">Precio Base</label>
     <input
-        x-ref="precio"
+        x-model="form.precio"
         type="number"
         name="precio"
         id="precio"
-        value="{{ old('precio', $producto->precio ?? '') }}"
         class="border p-2 w-full"
         step="0.01"
         required
@@ -50,7 +48,7 @@
 <div class="mb-4">
     <label for="categoria_id" class="block font-medium">Categoría</label>
     <select
-        x-ref="categoria"
+        x-model="form.categoria_id"
         name="categoria_id"
         id="categoria_id"
         class="border p-2 w-full"
@@ -58,10 +56,7 @@
     >
         <option value="">-- Seleccione --</option>
         @foreach ($categorias as $id => $nombre)
-            <option
-                value="{{ $id }}"
-                {{ old('categoria_id', $producto->categoria_id ?? '') == $id ? 'selected' : '' }}
-            >{{ $nombre }}</option>
+            <option value="{{ $id }}">{{ $nombre }}</option>
         @endforeach
     </select>
     @error('categoria_id')
@@ -71,14 +66,12 @@
 
 <div class="mb-4">
     <input type="hidden" name="personalizable" value="0">
-
     <label class="inline-flex items-center">
         <input
-            x-ref="personalizable"
+            x-model="form.personalizable"
             type="checkbox"
             name="personalizable"
             value="1"
-            {{ old('personalizable', $producto->personalizable ?? false) ? 'checked' : '' }}
             class="form-checkbox"
         >
         <span class="ml-2">Personalizable</span>
@@ -91,7 +84,7 @@
 <div class="mb-4">
     <label for="imagen" class="block font-medium">Imagen (opcional)</label>
     <input
-        x-ref="imagen"
+        @change="onFileChange"
         type="file"
         name="imagen"
         id="imagen"
@@ -111,11 +104,10 @@
 <div class="mb-4">
     <label for="unidades" class="block font-medium">Unidades incluidas</label>
     <input
-        x-ref="unidades"
+        x-model="form.unidades"
         type="number"
         name="unidades"
         id="unidades"
-        value="{{ old('unidades', $producto->unidades ?? 1) }}"
         class="border p-2 w-full"
         min="1"
         required
@@ -128,23 +120,14 @@
 <div class="mb-4">
     <label for="swappables" class="block font-medium">Ingredientes intercambiables (“A tu pinta”)</label>
     <select
-        x-ref="swappables"
+        x-model="form.ingredientes_seleccionados"
         name="swappables[]"
         id="swappables"
         multiple
         class="border p-2 w-full h-32"
     >
-        @foreach (\App\Models\Ingrediente::where('tipo', 'extra')->get() as $ing)
-            <option
-                value="{{ $ing->id }}"
-                {{ in_array(
-                    $ing->id,
-                    old(
-                        'swappables',
-                        isset($producto) ? $producto->swappables->pluck('id')->toArray() : []
-                    )
-                ) ? 'selected' : '' }}
-            >{{ $ing->nombre }}</option>
+        @foreach ($ingredientes as $ing)
+            <option :value="{{ $ing['id'] }}">{{ $ing['nombre'] }}</option>
         @endforeach
     </select>
     <p class="text-sm text-gray-500">

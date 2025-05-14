@@ -110,37 +110,37 @@ document.addEventListener('alpine:init', () => {
     }));
 
     // Productos
-    Alpine.data('productModal', () => ({
-        activeModal: null,
-        editAction: '',
-        deleteAction: '',
-        deleteName: '',
+    // Alpine.data('productModal', () => ({
+    //     activeModal: null,
+    //     editAction: '',
+    //     deleteAction: '',
+    //     deleteName: '',
 
-        openCreate() {
-            this.activeModal = 'create';
-            this.$nextTick(() => this.$el.querySelector('#create_nombre')?.focus());
-        },
-        openEdit(id, nombre, categoriaId, precio, personalizable) {
-            this.editAction = `/admin/productos/${id}`;
-            this.activeModal = 'edit';
-            // pre-llenado: asume que tu form usa x-model o x-ref en cada campo
-            this.$nextTick(() => {
-                const nameInput = this.$el.querySelector('#edit_nombre');
-                if (nameInput) nameInput.value = nombre;
-            });
-        },
-        openDelete(id, nombre) {
-            this.deleteAction = `/admin/productos/${id}`;
-            this.deleteName = nombre;
-            this.activeModal = 'delete';
-        },
-        closeModal() {
-            this.activeModal = null;
-            this.editAction = '';
-            this.deleteAction = '';
-            this.deleteName = '';
-        },
-    }));
+    //     openCreate() {
+    //         this.activeModal = 'create';
+    //         this.$nextTick(() => this.$el.querySelector('#create_nombre')?.focus());
+    //     },
+    //     openEdit(id, nombre, categoriaId, precio, personalizable) {
+    //         this.editAction = `/admin/productos/${id}`;
+    //         this.activeModal = 'edit';
+    //         // pre-llenado: asume que tu form usa x-model o x-ref en cada campo
+    //         this.$nextTick(() => {
+    //             const nameInput = this.$el.querySelector('#edit_nombre');
+    //             if (nameInput) nameInput.value = nombre;
+    //         });
+    //     },
+    //     openDelete(id, nombre) {
+    //         this.deleteAction = `/admin/productos/${id}`;
+    //         this.deleteName = nombre;
+    //         this.activeModal = 'delete';
+    //     },
+    //     closeModal() {
+    //         this.activeModal = null;
+    //         this.editAction = '';
+    //         this.deleteAction = '';
+    //         this.deleteName = '';
+    //     },
+    // }));
 });
 
 Alpine.start();
