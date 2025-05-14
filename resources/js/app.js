@@ -18,9 +18,13 @@ Alpine.plugin(focus);
    de renderizado:
       x-data="productModalAdmin(@json($categorias), @json($ingredientes))"
    ════════════════════════════════════════════════ */
-window.productModalAdmin = (categorias = {}, ingredientes = []) => ({
-  categorias,
-  ingredientes,
+// window.productModalAdmin = (categorias = {}, ingredientes = []) => ({
+//   categorias,
+//   ingredientes,
+  // Ahora lee desde window.akila y no recibe parámetros
+window.productModalAdmin = () => ({
+  categorias: window.akila?.categorias ?? {},
+  ingredientes: window.akila?.ingredientes ?? [],
   activeModal: null,                    // 'create' | 'edit' | 'delete'
   form: {
     id: null,
@@ -49,6 +53,8 @@ window.productModalAdmin = (categorias = {}, ingredientes = []) => ({
       imagen: null, imagenPreview: null,
       ingredientes_seleccionados: {},
     });
+    // optional chaining bien escrito
+    this.$nextTick(() => this.$el.querySelector('#create_nombre')?.focus());
   },
 
   openEdit(id, nombre, categoriaId, precio, personalizable, unidades, ingredientesPivot) {

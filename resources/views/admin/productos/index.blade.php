@@ -4,8 +4,8 @@
 @section('page-title', 'Gestión de Productos')
 
 @section('content')
-    <div x-data="productModal(@json($categorias), @json($ingredientes))" x-cloak
-        class="container mx-auto p-6">
+    <div x-data="productModalAdmin()" x-cloak class="container mx-auto p-6">
+
 
         {{-- Mensaje de éxito --}}
         @if (session('success'))
@@ -144,4 +144,12 @@
 @endsection
 
 @push('scripts')
+
+    <script>
+        // Exponemos los datos UNA sola vez, con escape seguro
+        window.akila = {
+            categorias: @js($categorias),
+            ingredientes: @js($ingredientes)
+        };
+    </script>
 @endpush
