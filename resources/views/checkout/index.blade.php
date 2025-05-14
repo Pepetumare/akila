@@ -3,10 +3,10 @@
 @section('title', 'Checkout - Sushi Akila')
 
 @section('content')
-<div class="container mx-auto p-6">
+<div class="container mx-auto p-6 max-w-lg">
     <h2 class="text-2xl font-bold mb-4">Finalizar Compra</h2>
 
-    {{-- Mostrar errores de validación --}}
+    {{-- Errores de validación --}}
     @if($errors->any())
       <div class="mb-4 p-4 bg-red-100 text-red-700 rounded">
         <ul class="list-disc list-inside">
@@ -17,93 +17,77 @@
       </div>
     @endif
 
-    <h3 class="font-semibold mb-2">Resumen de tu pedido</h3>
-    <table class="w-full mb-6 border">
-        <thead class="bg-gray-200">
-            <tr>
-                <th class="p-2 text-left">Producto</th>
-                <th class="p-2 text-left">Unidades</th>
-                <th class="p-2 text-left">Personalización</th>
-                <th class="p-2 text-left">Precio</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($cart as $item)
-                @php
-                    $p             = $productos[$item['product_id']];
-                    $unidades      = $item['unidades']      ?? 1;
-                    $removedBases  = $item['removed_bases'] ?? [];
-                    $extrasByUnit  = $item['extras']        ?? [];
-                @endphp
-                <tr class="border-b">
-                    <td class="p-2">{{ $p->nombre }}</td>
-                    <td class="p-2">{{ $unidades }}</td>
-                    <td class="p-2">
-                        {{-- Bases quitadas por unidad --}}
-                        @foreach($removedBases as $unit => $bases)
-                            @if(!empty($bases))
-                                <div class="mb-1">
-                                    <strong>Unidad {{ $unit }} quitó:</strong>
-                                    {{ implode(', ', $bases) }}
-                                </div>
-                            @endif
-                        @endforeach
+    {{-- Resumen del carrito --}}
+    <div class="mb-6">
+      <h3 class="font-semibold mb-2">Resumen de tu pedido</h3>
 
-                        {{-- Extras por unidad --}}
-                        @foreach($extrasByUnit as $unit => $extrasUnit)
-                            @if(!empty($extrasUnit))
-                                <div class="mb-1">
-                                    <strong>Unidad {{ $unit }} extras:</strong>
-                                    {{ implode(', ', array_column($extrasUnit, 'ingredient')) }}
-                                </div>
-                            @endif
-                        @endforeach
+      @php
+        $cart     = session('cart', []);
+        $subtotal = array_reduce($cart, fn($sum, $i) => $sum + $i['total_price'], 0);
+        // Si hay cargo de envío, añádelo aquí
+        $delivery = 0;
+        $total    = $subtotal + $delivery;
+      @endphp
 
-                        @if(empty($removedBases) && empty(array_filter($extrasByUnit)))
-                            <span class="text-gray-500">Sin personalización</span>
-                        @endif
-                    </td>
-                    <td class="p-2">${{ number_format($item['price'], 0, ',', '.') }}</td>
-                </tr>
-            @endforeach
-        </tbody>
-    </table>
+      @foreach($cart as $item)
+        <div class="border rounded p-3 mb-2">
+          <p>
+            <strong>{{ $item['nombre'] }}</strong> ×{{ $item['unidades'] }}
+          </p>
+          <p class="text-sm text-gray-600">
+            Subtotal: ${{ number_format($item['total_price'], 0, ',', '.') }}
+          </p>
+        </div>
+      @endforeach
 
+      <div class="text-right font-semibold">
+        Subtotal: ${{ number_format($subtotal, 0, ',', '.') }}
+      </div>
+      {{-- <div class="text-right font-semibold">Envío: ${{ number_format($delivery,0,',','.') }}</div> --}}
+      <div class="text-right text-lg font-bold mt-2">
+        Total a pagar: ${{ number_format($total, 0, ',', '.') }}
+      </div>
+    </div>
+
+    {{-- Formulario de datos cliente --}}
     <form action="{{ route('checkout.store') }}" method="POST" class="space-y-4">
         @csrf
 
         <div>
-            <label class="block font-medium">Nombre:</label>
+            <label for="cliente_nombre" class="block font-medium">Nombre completo:</label>
             <input 
                 type="text" 
-                name="nombre" 
-                value="{{ old('nombre') }}"
+                name="cliente_nombre" 
+                id="cliente_nombre"
+                value="{{ old('cliente_nombre') }}"
                 class="border p-2 w-full" 
                 required>
         </div>
 
         <div>
-            <label class="block font-medium">Teléfono:</label>
+            <label for="cliente_telefono" class="block font-medium">Teléfono:</label>
             <input 
-                type="text" 
-                name="telefono" 
-                value="{{ old('telefono') }}"
+                type="tel" 
+                name="cliente_telefono" 
+                id="cliente_telefono"
+                value="{{ old('cliente_telefono') }}"
                 class="border p-2 w-full" 
                 required>
         </div>
 
         <div>
-            <label class="block font-medium">Comentarios (opcional):</label>
+            <label for="cliente_comentarios" class="block font-medium">Comentarios (opcional):</label>
             <textarea 
-                name="comentarios" 
+                name="cliente_comentarios" 
+                id="cliente_comentarios"
                 class="border p-2 w-full"
-                rows="3">{{ old('comentarios') }}</textarea>
+                rows="3">{{ old('cliente_comentarios') }}</textarea>
         </div>
 
         <button 
             type="submit"
-            class="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600">
-            Generar Boleta e Imprimir
+            class="w-full bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600">
+            Confirmar Pedido
         </button>
     </form>
 </div>

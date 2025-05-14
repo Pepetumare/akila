@@ -1,5 +1,6 @@
 @csrf
 
+{{-- Nombre --}}
 <div class="mb-4">
     <label for="nombre" class="block font-medium">Nombre</label>
     <input
@@ -15,6 +16,7 @@
     @enderror
 </div>
 
+{{-- Descripción --}}
 <div class="mb-4">
     <label for="descripcion" class="block font-medium">Descripción</label>
     <textarea
@@ -29,10 +31,11 @@
     @enderror
 </div>
 
+{{-- Precio Base --}}
 <div class="mb-4">
     <label for="precio" class="block font-medium">Precio Base</label>
     <input
-        x-model="form.precio"
+        x-model.number="form.precio"
         type="number"
         name="precio"
         id="precio"
@@ -45,6 +48,7 @@
     @enderror
 </div>
 
+{{-- Categoría --}}
 <div class="mb-4">
     <label for="categoria_id" class="block font-medium">Categoría</label>
     <select
@@ -55,15 +59,16 @@
         required
     >
         <option value="">-- Seleccione --</option>
-        @foreach ($categorias as $id => $nombre)
-            <option value="{{ $id }}">{{ $nombre }}</option>
-        @endforeach
+        <template x-for="(label, id) in categorias" :key="id">
+            <option :value="id" x-text="label"></option>
+        </template>
     </select>
     @error('categoria_id')
         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
     @enderror
 </div>
 
+{{-- Personalizable --}}
 <div class="mb-4">
     <input type="hidden" name="personalizable" value="0">
     <label class="inline-flex items-center">
@@ -81,6 +86,7 @@
     @enderror
 </div>
 
+{{-- Imagen --}}
 <div class="mb-4">
     <label for="imagen" class="block font-medium">Imagen (opcional)</label>
     <input
@@ -90,21 +96,22 @@
         id="imagen"
         class="border p-2 w-full"
     >
-    @if (!empty($producto->imagen))
-        <p class="mt-2">
-            Imagen actual:<br>
-            <img src="{{ asset('storage/' . $producto->imagen) }}" alt="" class="w-32 h-auto rounded">
-        </p>
-    @endif
+    <template x-if="form.imagenPreview">
+      <p class="mt-2">
+        Imagen actual:<br>
+        <img :src="form.imagenPreview" alt="" class="w-32 h-auto rounded">
+      </p>
+    </template>
     @error('imagen')
         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
     @enderror
 </div>
 
+{{-- Unidades incluidas --}}
 <div class="mb-4">
     <label for="unidades" class="block font-medium">Unidades incluidas</label>
     <input
-        x-model="form.unidades"
+        x-model.number="form.unidades"
         type="number"
         name="unidades"
         id="unidades"
@@ -117,23 +124,45 @@
     @enderror
 </div>
 
+{{-- Ingredientes --}}
 <div class="mb-4">
-    <label for="swappables" class="block font-medium">Ingredientes intercambiables (“A tu pinta”)</label>
-    <select
-        x-model="form.ingredientes_seleccionados"
-        name="swappables[]"
-        id="swappables"
-        multiple
-        class="border p-2 w-full h-32"
-    >
-        @foreach ($ingredientes as $ing)
-            <option :value="{{ $ing['id'] }}">{{ $ing['nombre'] }}</option>
-        @endforeach
-    </select>
-    <p class="text-sm text-gray-500">
-        Estos ingredientes solo se tendrán en cuenta si el producto es de categoría “A tu pinta”.
-    </p>
-    @error('swappables')
-        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+    <label class="block font-medium mb-2">Ingredientes</label>
+
+    <template x-for="ing in ingredientes" :key="ing.id">
+      <div class="flex items-center space-x-4 mb-2">
+        <label class="inline-flex items-center space-x-2">
+          <input
+            type="checkbox"
+            :value="ing.id"
+            @change="
+              if ($event.target.checked) {
+                form.ingredientes_seleccionados[ing.id] = form.ingredientes_seleccionados[ing.id] 
+                  ?? (ing.pivot?.cantidad_permitida || 1);
+              } else {
+                delete form.ingredientes_seleccionados[ing.id];
+              }
+            "
+            :checked="form.ingredientes_seleccionados[ing.id] !== undefined"
+            class="form-checkbox"
+          >
+          <span x-text="ing.nombre"></span>
+        </label>
+
+        <input
+          type="number"
+          min="1"
+          x-model.number="form.ingredientes_seleccionados[ing.id]"
+          :disabled="form.ingredientes_seleccionados[ing.id] === undefined"
+          class="w-20 border rounded px-2 py-1"
+          placeholder="Límite"
+        />
+      </div>
+    </template>
+
+    @error('ingredientes')
+      <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+    @enderror
+    @error('cantidad_permitida.*')
+      <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
     @enderror
 </div>

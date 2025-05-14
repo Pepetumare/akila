@@ -4,7 +4,7 @@
 @section('page-title', 'Gestión de Productos')
 
 @section('content')
-    <div x-data='productModal(@json($categorias), @json($ingredientes))' x-cloak
+    <div x-data="productModal(@json($categorias), @json($ingredientes))" x-cloak
         class="container mx-auto p-6">
 
         {{-- Mensaje de éxito --}}
@@ -144,78 +144,4 @@
 @endsection
 
 @push('scripts')
-    <script>
-        function productModal(categorias, ingredientes) {
-            return {
-                categorias,
-                ingredientes,
-                activeModal: null,
-                form: {
-                    id: null,
-                    nombre: '',
-                    descripcion: '',
-                    precio: '',
-                    categoria_id: null,
-                    personalizable: true,
-                    unidades: 1,
-                    imagen: null,
-                    ingredientes_seleccionados: {},
-                },
-                get editAction() {
-                    return `/admin/productos/${this.form.id}`;
-                },
-                get deleteAction() {
-                    return `/admin/productos/${this.form.id}`;
-                },
-                openCreate() {
-                    this.activeModal = 'create';
-                    Object.assign(this.form, {
-                        id: null,
-                        nombre: '',
-                        descripcion: '',
-                        precio: '',
-                        categoria_id: Object.keys(this.categorias)[0] ?? null,
-                        personalizable: true,
-                        unidades: 1,
-                        imagen: null,
-                        ingredientes_seleccionados: {},
-                    });
-                },
-                openEdit(id, nombre, categoria_id, precio, personalizable, unidades, ingredientesPivot) {
-                    this.activeModal = 'edit';
-                    Object.assign(this.form, {
-                        id,
-                        nombre,
-                        categoria_id,
-                        precio,
-                        personalizable,
-                        unidades
-                    });
-                    this.form.ingredientes_seleccionados = {};
-                    ingredientesPivot.forEach(({
-                        id,
-                        pivot
-                    }) => {
-                        this.form.ingredientes_seleccionados[id] = pivot.cantidad_permitida ?? 1;
-                    });
-                },
-                openDelete(id, nombre) {
-                    this.activeModal = 'delete';
-                    this.form.id = id;
-                    this.form.nombre = nombre;
-                },
-                closeModal() {
-                    this.activeModal = null;
-                },
-                onFileChange(e) {
-                    this.form.imagen = e.target.files[0];
-                }
-            }
-        }
-
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('productModal', () => productModal(@json($categorias),
-                @json($ingredientes)));
-        });
-    </script>
 @endpush

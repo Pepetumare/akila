@@ -30,7 +30,7 @@ class DashboardController extends Controller
             ->pluck('count','status');  // colección [ 'pendiente' => 5, 'entregado' => 10, … ]
 
         // Top 5 productos por ingresos
-        $topProducts = OrderItem::select('product_id', DB::raw('SUM(price) as revenue'))
+        $topProducts = OrderItem::select('product_id', DB::raw('SUM(subtotal) as revenue'))
             ->groupBy('product_id')
             ->orderByDesc('revenue')
             ->with('producto')

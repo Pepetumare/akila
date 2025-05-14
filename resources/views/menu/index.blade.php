@@ -57,10 +57,23 @@
                         <p class="text-red-500 font-bold">
                             Precio: ${{ number_format($producto->precio, 0, ',', '.') }}
                         </p>
-                        <button class="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                            onclick="openModal('{{ $producto->id }}')">
-                            Personalizar
+                        <button @click="openModal({{ $producto->id }})" class="btn btn-danger w-100 mt-2">
+                            Ver detalle
                         </button>
+
+                        <!-- Modal único Alpine -->
+                        <div x-data="productModal()" x-cloak class="modal fade" id="productoModal" tabindex="-1">
+                            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-danger text-white">
+                                        <h5 class="modal-title" x-text="title"></h5>
+                                        <button type="button" class="btn-close btn-close-white"
+                                            @click="closeModal()"></button>
+                                    </div>
+                                    <div class="modal-body" x-html="bodyHtml"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

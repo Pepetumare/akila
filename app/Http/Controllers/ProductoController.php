@@ -43,4 +43,11 @@ class ProductoController extends Controller
         $producto = Producto::find($id);
         return response()->json($producto);
     }
+
+    public function modal($id)
+    {
+        // Cargar producto con sus ingredientes y pivote
+        $producto = Producto::with('ingredientes')->findOrFail($id);
+        return view('partials.modal-producto', compact('producto'));
+    }
 }

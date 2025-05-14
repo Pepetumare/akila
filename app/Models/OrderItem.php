@@ -7,10 +7,13 @@ class OrderItem extends Model
 {
     protected $fillable = [
         'order_id',
-        'product_id',
+        'product_id',    // o 'product_id' según tu esquema
+        'nombre',
+        'unidades',
+        'precio_base',
+        'subtotal',       // aquí en lugar de 'price'
         'removed_bases',
         'extras',
-        'price',
     ];
 
     protected $casts = [
