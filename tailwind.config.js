@@ -4,10 +4,16 @@ import forms from '@tailwindcss/forms';
 /** @type {import('tailwindcss').Config} */
 export default {
     content: [
-        './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
+        './resources/**/*.blade.php',
+        './resources/**/*.js',
+        './resources/**/*.vue',
         './storage/framework/views/*.php',
-        './resources/views/**/*.blade.php',
+        './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
     ],
+    safelist: [
+    // clases generadas dinámicamente
+    'bg-red-500', 'bg-green-500', 'text-yellow-500',
+  ],
 
     theme: {
         extend: {
@@ -17,8 +23,7 @@ export default {
         },
     },
 
-    plugins: [forms
-    ],
+    plugins: [forms],
 };
 
 module.exports = {
@@ -30,5 +35,5 @@ module.exports = {
         extend: {},
     },
     plugins: [],
-    
+
 }
