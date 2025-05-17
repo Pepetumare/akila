@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Producto;
 use App\Models\Categoria;
-use App\Models\Ingrediente;      // 👈 Importamos Ingrediente
+use App\Models\Ingrediente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -23,8 +23,20 @@ class ProductoController extends Controller
             ->paginate(10)
             ->appends($request->only('q'));
 
+        // Generamos la URL de la imagen para la vista
+        $productos->getCollection()->transform(function ($producto) {
+            if ($producto->imagen && Storage::disk('public')->exists($producto->imagen)) {
+                // /storage/productos/archivo.jpg
+                $producto->url_imagen = Storage::disk('public')->url($producto->imagen);
+            } else {
+                // public/images/default-product.png
+                $producto->url_imagen = asset('images/default-product.png');
+            }
+            return $producto;
+        });
+
         $categorias = Categoria::pluck('nombre', 'id')
-        ->map(fn ($nombre) => str_replace('\\', ' / ', $nombre));
+            ->map(fn($nombre) => str_replace('\\', ' / ', $nombre));
 
         $ingredientes = Ingrediente::orderBy('nombre')->get();
 
@@ -33,15 +45,14 @@ class ProductoController extends Controller
 
     public function create()
     {
-        $categorias  = Categoria::orderBy('nombre')->pluck('nombre', 'id');
-        $ingredientes = Ingrediente::orderBy('nombre')->get(); // 👈 Lista de ingredientes
+        $categorias   = Categoria::orderBy('nombre')->pluck('nombre', 'id');
+        $ingredientes = Ingrediente::orderBy('nombre')->get();
 
         return view('admin.productos.create', compact('categorias', 'ingredientes'));
     }
 
     public function store(Request $request)
     {
-        // Validación
         $data = $request->validate([
             'nombre'               => 'required|string',
             'descripcion'          => 'nullable|string',
@@ -59,16 +70,17 @@ class ProductoController extends Controller
         $data['personalizable'] = (bool) $data['personalizable'];
 
         if ($request->hasFile('imagen')) {
+            // Se guarda en storage/app/public/productos
             $data['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
         $producto = Producto::create($data);
 
-        // Sincronizar ingredientes con pivot cantidad_permitida
+        // Sincronizar pivot ingredientes
         $syncData = [];
         foreach ($request->input('ingredientes', []) as $id) {
             $syncData[$id] = [
-                'cantidad_permitida' => $request->input("cantidad_permitida.{$id}", 1)
+                'cantidad_permitida' => $request->input("cantidad_permitida.{$id}", 1),
             ];
         }
         $producto->ingredientes()->sync($syncData);
@@ -80,17 +92,14 @@ class ProductoController extends Controller
 
     public function edit(Producto $producto)
     {
-        dd($producto);
         $categorias   = Categoria::orderBy('nombre')->pluck('nombre', 'id');
         $ingredientes = Ingrediente::orderBy('nombre')->get();
 
         return view('admin.productos.edit', compact('producto', 'categorias', 'ingredientes'));
     }
 
-
     public function update(Request $request, Producto $producto)
     {
-        // Validación (igual que en store)
         $data = $request->validate([
             'nombre'               => 'required|string',
             'descripcion'          => 'nullable|string',
@@ -108,6 +117,7 @@ class ProductoController extends Controller
         $data['personalizable'] = (bool) $data['personalizable'];
 
         if ($request->hasFile('imagen')) {
+            // Borramos la anterior si existe
             if ($producto->imagen) {
                 Storage::disk('public')->delete($producto->imagen);
             }
@@ -116,11 +126,11 @@ class ProductoController extends Controller
 
         $producto->update($data);
 
-        // Sincronizar ingredientes con pivot cantidad_permitida
+        // Sincronizar pivot ingredientes
         $syncData = [];
         foreach ($request->input('ingredientes', []) as $id) {
             $syncData[$id] = [
-                'cantidad_permitida' => $request->input("cantidad_permitida.{$id}", 1)
+                'cantidad_permitida' => $request->input("cantidad_permitida.{$id}", 1),
             ];
         }
         $producto->ingredientes()->sync($syncData);
