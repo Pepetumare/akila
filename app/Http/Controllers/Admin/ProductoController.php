@@ -53,6 +53,7 @@ class ProductoController extends Controller
 
     public function store(Request $request)
     {
+        // 1) Validación incluyendo campos de rolls e ingredientes
         $data = $request->validate([
             'nombre'               => 'required|string',
             'descripcion'          => 'nullable|string',
@@ -61,37 +62,54 @@ class ProductoController extends Controller
             'imagen'               => 'nullable|image|max:2048',
             'personalizable'       => 'required|in:0,1',
             'unidades'             => 'required|integer|min:1',
+            // Validación de rolls
+            'rolls_total'          => 'required|integer|min:0',
+            'rolls_envueltos'      => 'required|integer|min:0|lte:rolls_total',
+            'rolls_fritos'         => 'required|integer|min:0|lte:rolls_total',
+            // Validación de ingredientes
             'ingredientes'         => 'nullable|array',
             'ingredientes.*'       => 'exists:ingredientes,id',
             'cantidad_permitida'   => 'nullable|array',
             'cantidad_permitida.*' => 'integer|min:1',
-            'rolls_total'          => 'required|integer|min:0',
-            'rolls_envueltos'      => 'required|integer|min:0|lte:rolls_total',
-            'rolls_fritos'         => 'required|integer|min:0|lte:rolls_total',
         ]);
 
+        // 2) Cast del checkbox
         $data['personalizable'] = (bool) $data['personalizable'];
 
+        // 3) Guardar imagen si existe
         if ($request->hasFile('imagen')) {
-            // Se guarda en storage/app/public/productos
             $data['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
-        $producto = Producto::create($data);
+        // 4) Crear el producto con los campos básicos + rolls
+        $producto = Producto::create([
+            'nombre'         => $data['nombre'],
+            'descripcion'    => $data['descripcion'],
+            'precio'         => $data['precio'],
+            'categoria_id'   => $data['categoria_id'],
+            'personalizable' => $data['personalizable'],
+            'unidades'       => $data['unidades'],
+            'rolls_total'    => $data['rolls_total'],
+            'rolls_envueltos' => $data['rolls_envueltos'],
+            'rolls_fritos'   => $data['rolls_fritos'],
+            'imagen'         => $data['imagen'] ?? null,
+        ]);
 
-        // Sincronizar pivot ingredientes
+        // 5) Sincronizar pivote producto_ingrediente
         $syncData = [];
-        foreach ($request->input('ingredientes', []) as $id) {
-            $syncData[$id] = [
-                'cantidad_permitida' => $request->input("cantidad_permitida.{$id}", 1),
+        foreach ($request->input('ingredientes', []) as $ingId) {
+            $syncData[$ingId] = [
+                'cantidad_permitida' => $request->input("cantidad_permitida.{$ingId}", 1),
             ];
         }
         $producto->ingredientes()->sync($syncData);
 
+        // 6) Redirigir con mensaje de éxito
         return redirect()
             ->route('admin.productos.index')
             ->with('success', 'Producto creado correctamente.');
     }
+
 
     public function edit(Producto $producto)
     {
@@ -103,6 +121,7 @@ class ProductoController extends Controller
 
     public function update(Request $request, Producto $producto)
     {
+        // 1) Validación incluyendo campos de rolls e ingredientes
         $data = $request->validate([
             'nombre'               => 'required|string',
             'descripcion'          => 'nullable|string',
@@ -111,37 +130,58 @@ class ProductoController extends Controller
             'imagen'               => 'nullable|image|max:2048',
             'personalizable'       => 'required|in:0,1',
             'unidades'             => 'required|integer|min:1',
+            // Validación de rolls
+            'rolls_total'          => 'required|integer|min:0',
+            'rolls_envueltos'      => 'required|integer|min:0|lte:rolls_total',
+            'rolls_fritos'         => 'required|integer|min:0|lte:rolls_total',
+            // Validación de ingredientes
             'ingredientes'         => 'nullable|array',
             'ingredientes.*'       => 'exists:ingredientes,id',
             'cantidad_permitida'   => 'nullable|array',
             'cantidad_permitida.*' => 'integer|min:1',
         ]);
 
+        // 2) Cast del checkbox
         $data['personalizable'] = (bool) $data['personalizable'];
 
+        // 3) Procesar posible nueva imagen
         if ($request->hasFile('imagen')) {
-            // Borramos la anterior si existe
             if ($producto->imagen) {
-                Storage::disk('public')->delete($producto->imagen);
+                \Storage::disk('public')->delete($producto->imagen);
             }
             $data['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
-        $producto->update($data);
+        // 4) Actualizar campos básicos + rolls
+        $producto->update([
+            'nombre'         => $data['nombre'],
+            'descripcion'    => $data['descripcion'],
+            'precio'         => $data['precio'],
+            'categoria_id'   => $data['categoria_id'],
+            'personalizable' => $data['personalizable'],
+            'unidades'       => $data['unidades'],
+            'rolls_total'    => $data['rolls_total'],
+            'rolls_envueltos' => $data['rolls_envueltos'],
+            'rolls_fritos'   => $data['rolls_fritos'],
+            'imagen'         => $data['imagen'] ?? $producto->imagen,
+        ]);
 
-        // Sincronizar pivot ingredientes
+        // 5) Sincronizar pivote ingrediente_→producto
         $syncData = [];
-        foreach ($request->input('ingredientes', []) as $id) {
-            $syncData[$id] = [
-                'cantidad_permitida' => $request->input("cantidad_permitida.{$id}", 1),
+        foreach ($request->input('ingredientes', []) as $ingId) {
+            $syncData[$ingId] = [
+                'cantidad_permitida' => $request->input("cantidad_permitida.{$ingId}", 1),
             ];
         }
+        // Esto borrará todas las relaciones no incluidas en $syncData
         $producto->ingredientes()->sync($syncData);
 
+        // 6) Redirigir con éxito
         return redirect()
             ->route('admin.productos.index')
             ->with('success', 'Producto actualizado correctamente.');
     }
+
 
     public function destroy(Producto $producto)
     {

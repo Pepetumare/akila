@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Categoria;
+use App\Models\Ingrediente;
 use App\Models\Producto;
 use Illuminate\Http\Request;
 
@@ -11,7 +12,7 @@ class ProductoController extends Controller
     public function index($filter = null)
     {
         $query = Producto::query();
-    
+
         // Filtros opcionales
         switch ($filter) {
             case 'price_asc':
@@ -30,13 +31,14 @@ class ProductoController extends Controller
                 $query->orderBy('nombre', 'asc');
                 break;
         }
-    
+
         $productos = $query->get(); // o paginate si prefieres
         $categorias = Categoria::all(); // 👈 esto es lo que necesitas
-    
-        return view('menu.index', compact('productos', 'categorias'));
+        $allIngredients = Ingrediente::orderBy('nombre')->get(['id', 'nombre']);
+
+        return view('menu.index', compact('productos', 'categorias', 'allIngredients'));
     }
-    
+
 
     public function show($id)
     {
@@ -46,8 +48,20 @@ class ProductoController extends Controller
 
     public function modal($id)
     {
-        // Cargar producto con sus ingredientes y pivote
+        // Traer el producto con sus ingredientes
         $producto = Producto::with('ingredientes')->findOrFail($id);
-        return view('partials.modal-producto', compact('producto'));
+
+        // Calcular número de rolls (bloques de 10 piezas)
+        foreach ($producto->ingredientes as $ing) {
+            $cantidad = $ing->pivot->cantidad_permitida ?? 0;
+            $ing->pivot->rolls = intdiv($cantidad, 10);
+        }
+
+        // Traer todos los ingredientes para permitir el swap
+        $allIngredients = \App\Models\Ingrediente::orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        // Pasar ambos a la vista
+        return view('components.modal-producto', compact('producto', 'allIngredients'));
     }
 }

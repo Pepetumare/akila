@@ -111,31 +111,43 @@
         @enderror
     </div>
 </div>
-
-
 {{-- Ingredientes --}}
 <div class="mb-4">
     <label class="block font-medium mb-2">Ingredientes</label>
 
     <template x-for="ing in ingredientes" :key="ing.id">
         <div class="flex items-center space-x-4 mb-2">
+            {{-- Checkbox con name="ingredientes[]" --}}
             <label class="inline-flex items-center space-x-2">
-                <input type="checkbox" :value="ing.id"
-                    @change="
-              if ($event.target.checked) {
-                form.ingredientes_seleccionados[ing.id] = form.ingredientes_seleccionados[ing.id] 
-                  ?? (ing.pivot?.cantidad_permitida || 1);
-              } else {
-                delete form.ingredientes_seleccionados[ing.id];
-              }
-            "
-                    :checked="form.ingredientes_seleccionados[ing.id] !== undefined" class="form-checkbox">
+                <input
+                  type="checkbox"
+                  name="ingredientes[]"
+                  :value="ing.id"
+                  @change="
+                    if ($event.target.checked) {
+                      form.ingredientes_seleccionados[ing.id] = 
+                        form.ingredientes_seleccionados[ing.id] 
+                        ?? (ing.pivot?.cantidad_permitida || 1);
+                    } else {
+                      delete form.ingredientes_seleccionados[ing.id];
+                    }
+                  "
+                  :checked="form.ingredientes_seleccionados[ing.id] !== undefined"
+                  class="form-checkbox"
+                >
                 <span x-text="ing.nombre"></span>
             </label>
 
-            <input type="number" min="1" x-model.number="form.ingredientes_seleccionados[ing.id]"
-                :disabled="form.ingredientes_seleccionados[ing.id] === undefined" class="w-20 border rounded px-2 py-1"
-                placeholder="Límite" />
+            {{-- Input numérico con name="cantidad_permitida[ID]" --}}
+            <input
+              type="number"
+              min="1"
+              x-model.number="form.ingredientes_seleccionados[ing.id]"
+              :disabled="form.ingredientes_seleccionados[ing.id] === undefined"
+              :name="`cantidad_permitida[${ing.id}]`"
+              class="w-20 border rounded px-2 py-1"
+              placeholder="Límite"
+            />
         </div>
     </template>
 
