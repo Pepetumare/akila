@@ -65,6 +65,9 @@ class ProductoController extends Controller
             'ingredientes.*'       => 'exists:ingredientes,id',
             'cantidad_permitida'   => 'nullable|array',
             'cantidad_permitida.*' => 'integer|min:1',
+            'rolls_total'          => 'required|integer|min:0',
+            'rolls_envueltos'      => 'required|integer|min:0|lte:rolls_total',
+            'rolls_fritos'         => 'required|integer|min:0|lte:rolls_total',
         ]);
 
         $data['personalizable'] = (bool) $data['personalizable'];

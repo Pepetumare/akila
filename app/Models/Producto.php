@@ -21,6 +21,9 @@ class Producto extends Model
         'categoria_id',
         'personalizable',
         'unidades',
+        'rolls_total',
+        'rolls_envueltos',
+        'rolls_fritos',
         // 'slug' si quieres asignarlo masivamente
     ];
 
@@ -52,8 +55,8 @@ class Producto extends Model
     public function ingredientes()
     {
         return $this->belongsToMany(Ingrediente::class, 'ingrediente_producto')
-                    ->withPivot('cantidad_permitida')
-                    ->withTimestamps();
+            ->withPivot('cantidad_permitida')
+            ->withTimestamps();
     }
 
     // Relación “swappables” (opcionalmente podrías incluir pivot/timestamps)
@@ -63,8 +66,8 @@ class Producto extends Model
             Ingrediente::class,
             'producto_swappable_ingredient'
         )
-        // ->withPivot('cantidad_permitida') 
-        // ->withTimestamps()
+            // ->withPivot('cantidad_permitida') 
+            // ->withTimestamps()
         ;
     }
 }

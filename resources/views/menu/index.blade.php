@@ -3,56 +3,70 @@
 @section('title', 'Menú - Sushi Akila')
 
 @section('content')
-    <div class="container mx-auto" x-data="{ showCats: true, selectedCat: 'all' }">
-        <!-- … resto de categorías … -->
+<div class="container mx-auto" x-data="{ selectedCat: 'all' }">
+    <!-- Lista de categorías -->
+    <div class="flex space-x-2 mb-6">
+        <button
+            @click="selectedCat = 'all'"
+            :class="selectedCat === 'all' 
+                ? 'bg-red-500 text-white' 
+                : 'bg-gray-200 text-gray-800'"
+            class="px-4 py-2 rounded">
+            Todas
+        </button>
+        @foreach($categorias as $cat)
+            <button
+                @click="selectedCat = '{{ $cat->id }}'"
+                :class="selectedCat == '{{ $cat->id }}'
+                    ? 'bg-red-500 text-white'
+                    : 'bg-gray-200 text-gray-800'"
+                class="px-4 py-2 rounded">
+                {{ $cat->nombre }}
+            </button>
+        @endforeach
+    </div>
 
-        <!-- Grid de Productos filtrados -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            @foreach ($productos as $producto)
-                <div
-                    x-show="selectedCat === 'all' || selectedCat === '{{ $producto->categoria_id }}'"
-                    x-cloak
-                    x-transition.opacity.duration.200ms
-                    class="bg-white shadow-lg rounded-lg overflow-hidden"
-                >
-                    @php
-                        // Comprueba si existe la imagen en storage/app/public
-                        $hasImg = $producto->imagen
-                            && \Storage::disk('public')->exists($producto->imagen);
-                        // URL final: o bien la subida, o el fallback
-                        $urlImg = $hasImg
-                            ? \Storage::disk('public')->url($producto->imagen)
-                            : asset('img/no_disponible.png');
-                    @endphp
+    <!-- Grid de Productos filtrados -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        @foreach ($productos as $producto)
+            <div
+                x-show="selectedCat === 'all' 
+                    || selectedCat == '{{ $producto->categoria_id }}'"
+                x-cloak
+                x-transition.opacity.duration.200ms
+                class="bg-white shadow-lg rounded-lg overflow-hidden"
+            >
+                @php
+                    $hasImg = $producto->imagen
+                        && \Storage::disk('public')->exists($producto->imagen);
+                    $urlImg = $hasImg
+                        ? \Storage::disk('public')->url($producto->imagen)
+                        : asset('img/no_disponible.png');
+                @endphp
 
-                    <img
-                        src="{{ $urlImg }}"
-                        alt="{{ $producto->nombre }}"
-                        class="w-full h-48 object-cover"
-                    />
+                <img
+                    src="{{ $urlImg }}"
+                    alt="{{ $producto->nombre }}"
+                    class="w-full h-48 object-cover"
+                />
 
-                    <div class="p-4">
-                        <h3 class="text-xl font-semibold">{{ $producto->nombre }}</h3>
-                        <p class="text-gray-600">{{ $producto->descripcion }}</p>
-                        <p class="text-red-500 font-bold">
-                            Precio: ${{ number_format($producto->precio, 0, ',', '.') }}
-                        </p>
-                        <button
-                            @click="openModal({{ $producto->id }})"
-                            class="btn btn-danger w-100 mt-2"
-                        >
-                            Ver detalle
-                        </button>
-
-                        <!-- Modal único Alpine -->
-                        <div x-data="productModal()" x-cloak class="modal fade" id="productoModal" tabindex="-1">
-                            <!-- … contenido del modal … -->
-                        </div>
-                    </div>
+                <div class="p-4">
+                    <h3 class="text-xl font-semibold">{{ $producto->nombre }}</h3>
+                    <p class="text-gray-600">{{ $producto->descripcion }}</p>
+                    <p class="text-red-500 font-bold">
+                        Precio: ${{ number_format($producto->precio, 0, ',', '.') }}
+                    </p>
+                    <button
+                        @click="openModal({{ $producto->id }})"
+                        class="btn btn-danger w-full mt-2"
+                    >
+                        Ver detalle
+                    </button>
                 </div>
 
                 @include('components.modal-producto', ['producto' => $producto])
-            @endforeach
-        </div>
+            </div>
+        @endforeach
     </div>
+</div>
 @endsection
