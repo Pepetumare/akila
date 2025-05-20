@@ -32,7 +32,7 @@ class ProductoController extends Controller
                 break;
         }
 
-        $productos = $query->get(); // o paginate si prefieres
+        $productos = $query->with('ingredientes')->get();
         $categorias = Categoria::all(); // 👈 esto es lo que necesitas
         $allIngredients = Ingrediente::orderBy('nombre')->get(['id', 'nombre']);
 

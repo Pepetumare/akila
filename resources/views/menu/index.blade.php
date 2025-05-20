@@ -59,8 +59,13 @@
                     </div>
 
 
-                    @include('components.modal-producto', ['producto' => $producto])
+
+
                 </div>
+                @include('components.modal-producto', [
+                    'producto' => $producto,
+                    'allIngredients' => $allIngredients,
+                ])
             @endforeach
         </div>
     </div>

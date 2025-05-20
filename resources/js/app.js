@@ -176,45 +176,45 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
-    /* Modal público de Producto */
-    Alpine.data('productModal', () => ({
-        isOpen: false,
-        title: '',
-        bodyHtml: '',
-        openModal(id) {
-            this.isOpen = true;
-            this.title = 'Cargando...';
-            this.bodyHtml = '<div class="text-center p-4"><div class="spinner-border text-danger"></div></div>';
-            const modalEl = document.getElementById('productoModal');
-            this.modalInstance = new bootstrap.Modal(modalEl);
-            this.modalInstance.show();
+    // /* Modal público de Producto */
+    // Alpine.data('productModal', () => ({
+    //     isOpen: false,
+    //     title: '',
+    //     bodyHtml: '',
+    //     openModal(id) {
+    //         this.isOpen = true;
+    //         this.title = 'Cargando...';
+    //         this.bodyHtml = '<div class="text-center p-4"><div class="spinner-border text-danger"></div></div>';
+    //         const modalEl = document.getElementById('productoModal');
+    //         this.modalInstance = new bootstrap.Modal(modalEl);
+    //         this.modalInstance.show();
 
-            fetch(`/producto/modal/${id}`)
-                .then(res => res.ok ? res.text() : Promise.reject())
-                .then(html => {
-                    this.bodyHtml = html;
-                    const tmp = document.createElement('div');
-                    tmp.innerHTML = html;
-                    const h = tmp.querySelector('#modal-producto-titulo');
-                    this.title = h ? h.textContent : 'Detalle del producto';
-                    setTimeout(() => window.inicializarModalProducto ?.(), 50);
-                })
-                .catch(() => {
-                    this.bodyHtml = '<p class="text-danger p-4">Error al cargar el producto.</p>';
-                    this.title = 'Error';
-                });
-        },
-        closeModal() {
-            this.isOpen && this.modalInstance.hide();
-            this.isOpen = false;
-            this.title = this.bodyHtml = '';
-        }
-    }));
+    //         fetch(`/producto/modal/${id}`)
+    //             .then(res => res.ok ? res.text() : Promise.reject())
+    //             .then(html => {
+    //                 this.bodyHtml = html;
+    //                 const tmp = document.createElement('div');
+    //                 tmp.innerHTML = html;
+    //                 const h = tmp.querySelector('#modal-producto-titulo');
+    //                 this.title = h ? h.textContent : 'Detalle del producto';
+    //                 setTimeout(() => window.inicializarModalProducto ?.(), 50);
+    //             })
+    //             .catch(() => {
+    //                 this.bodyHtml = '<p class="text-danger p-4">Error al cargar el producto.</p>';
+    //                 this.title = 'Error';
+    //             });
+    //     },
+    //     closeModal() {
+    //         this.isOpen && this.modalInstance.hide();
+    //         this.isOpen = false;
+    //         this.title = this.bodyHtml = '';
+    //     }
+    // }));
 
-    Alpine.data('productModalDetails', (assigned, allIngredients) => ({
+    Alpine.data('productModalDetails', (assigned, allIngredients, basePrice) => ({
         assigned,
         allIngredients,
-        basePrice: 0,
+        basePrice, // ⚠️ antes ponías `price`
         baseRolls: {},
         currentRolls: {},
         availableRolls: 0,
@@ -222,115 +222,153 @@ document.addEventListener('alpine:init', () => {
         swapping: null,
 
         init(prodId) {
-          // 1) Montar baseRolls/currentRolls
-          this.baseRolls = {};
-          this.currentRolls = {};
-          assigned.forEach(i => {
-            this.baseRolls[i.id]    = i.rolls;
-            this.currentRolls[i.id] = i.rolls;
-          });
+            // 1) Inicializa baseRolls y currentRolls
+            this.baseRolls = {};
+            this.currentRolls = {};
+            this.assigned.forEach(i => {
+                this.baseRolls[i.id] = i.rolls;
+                this.currentRolls[i.id] = i.rolls;
+            });
 
-          // 2) Leer precio
-          this.basePrice = parseInt(
-            document.getElementById(`precio-${prodId}`).dataset.basePrice,
-            10
-          ) || 0;
+            // 2) Relee el precio base del DOM (si quisieras)
+            const precioFromAttr = parseInt(
+                document.getElementById(`precio-${prodId}`) ?.dataset.basePrice,
+                10
+            );
+            if (!isNaN(precioFromAttr)) {
+                this.basePrice = precioFromAttr;
+            }
 
-          // 3) Calcular availableRolls & recargoRolls
-          this.updateAvailable();
+            // 3) Calcula disponibles y recargo
+            this.updateAvailable();
         },
 
         updateAvailable() {
-          const sumBase    = Object.values(this.baseRolls).reduce((a,b)=>a+b,0);
-          const sumCurrent = Object.values(this.currentRolls).reduce((a,b)=>a+b,0);
-          this.availableRolls = sumBase - sumCurrent;
-          this.recargoRolls   = Object.entries(this.currentRolls)
-            .reduce((acc, [id, curr]) => {
-              const delta = curr - (this.baseRolls[id]||0);
-              return acc + (delta > 0 ? delta : 0);
-            }, 0);
+            const sumBase = Object.values(this.baseRolls).reduce((a, b) => a + b, 0);
+            const sumCurrent = Object.values(this.currentRolls).reduce((a, b) => a + b, 0);
+            this.availableRolls = sumBase - sumCurrent;
+            this.recargoRolls = Object.entries(this.currentRolls)
+                .reduce((acc, [id, curr]) => {
+                    const delta = curr - (this.baseRolls[id] || 0);
+                    return acc + (delta > 0 ? delta : 0);
+                }, 0);
         },
 
         get availableToSwap() {
-          return allIngredients.filter(i => i.id != this.swapping);
+            return this.allIngredients.filter(i => i.id !== this.swapping);
         },
 
         getName(id) {
-          const f = assigned.find(i => i.id == id);
-          return f ? f.nombre : '';
+            const found = this.assigned.find(i => i.id === id);
+            return found ? found.nombre : '';
         },
 
         startSwap(id) {
-          if (this.currentRolls[id] > 0) this.swapping = id;
+            if (this.currentRolls[id] > 0) {
+                this.swapping = id;
+            }
         },
 
         doSwap(targetId) {
-          this.currentRolls[this.swapping]--;
-          this.currentRolls[targetId] = (this.currentRolls[targetId]||0) + 1;
-          this.swapping = null;
-          this.updateAvailable();
+            this.currentRolls[this.swapping]--;
+            this.currentRolls[targetId] = (this.currentRolls[targetId] || 0) + 1;
+            this.swapping = null;
+            this.updateAvailable();
         },
 
         cancelSwap() {
-          this.swapping = null;
+            this.swapping = null;
         },
 
         addToCart(id) {
-          window.addToCart(id); // tu fetch ya está definido en window.addToCart
+            window.addToCart(id); // tu función de fetch
         },
 
         closeModal(id) {
-          document.getElementById(`modal-${id}`).classList.add('hidden');
+            document.getElementById(`modal-${id}`) ?.classList.add('hidden');
         }
-      }));
+    }));
+
+
+Alpine.data('productSwapper', (assigned, allIngredients) => ({
+  // — Parámetros inyectados —
+  assigned,         // [ {id,nombre,rolls}, … ]
+  allIngredients,   // [ {id,nombre}, … ]
+
+  // — Estado interno —
+  baseRolls: {},      // { [id]: rollsOriginales }
+  currentRolls: [],   // [ {id,nombre,rollsActuales}, … ]
+  swapping: null,     // id del ingrediente a intercambiar
+
+  // — Computeds —
+  get availableRolls() {
+    const sumBase = Object.values(this.baseRolls).reduce((a,b) => a + b, 0);
+    const sumCurr = this.currentRolls.reduce((a,i) => a + i.rolls, 0);
+    return sumBase - sumCurr;
+  },
+
+  get recargoRolls() {
+    return this.currentRolls.reduce((acc, cur) => {
+      const base = this.baseRolls[cur.id] || 0;
+      const delta = cur.rolls - base;
+      return acc + (delta > 0 ? delta : 0);
+    }, 0);
+  },
+
+  get availableToSwap() {
+    // Lista de targets: todos menos el que estoy swapping
+    return this.allIngredients.filter(i => i.id !== this.swapping);
+  },
+
+  // — Inicialización —
+  init() {
+    // 1) Montar baseRolls
+    this.assigned.forEach(i => {
+      this.baseRolls[i.id] = i.rolls;
+    });
+    // 2) Montar currentRolls (clon de assigned)
+    this.currentRolls = this.assigned.map(i => ({
+      id:     i.id,
+      nombre: i.nombre,
+      rolls:  i.rolls,
+    }));
+  },
+
+  // — Acciones de swap —
+  startSwap(id) {
+    if ((this.baseRolls[id] || 0) > 0) {
+      this.swapping = id;
+    }
+  },
+
+  doSwap(targetId) {
+    // Busco y decremento en currentRolls
+    const src = this.currentRolls.find(i => i.id === this.swapping);
+    if (src && src.rolls > 0) src.rolls--;
+    // Busco o creo el destino y aumento
+    let dest = this.currentRolls.find(i => i.id === targetId);
+    if (dest) {
+      dest.rolls++;
+    } else {
+      dest = { 
+        id:     targetId,
+        nombre: this.allIngredients.find(i => i.id === targetId).nombre,
+        rolls:  1
+      };
+      this.currentRolls.push(dest);
+    }
+    this.swapping = null;
+  },
+
+  cancelSwap() {
+    this.swapping = null;
+  },
+}));
+
 
 });
 
 
-Alpine.data('productSwapper', (assigned, allIngredients) => ({
-    baseRolls: assigned, // [ {id,nombre,rolls}, … ]
-    currentRolls: assigned.map(obj => ({
-        ...obj
-    })),
-    swapping: null, // id del ingrediente que estamos quitando
-    availableToSwap: [], // lista de ingredientes “targets”
-
-    startSwap(ingId) {
-        this.swapping = ingId;
-        // genera lista de posibles destinos: todos – el propio
-        this.availableToSwap = this.allIngredients
-            .filter(i => i.id !== ingId);
-    },
-
-    getName(id) {
-        const found = this.baseRolls.find(i => i.id === id);
-        return found ? found.nombre : '';
-    },
-
-    doSwap(targetId) {
-        // decrementa 1 roll de swapping
-        const src = this.currentRolls.find(i => i.id === this.swapping);
-        src.rolls--;
-        // incrementa 1 roll en target
-        let dest = this.currentRolls.find(i => i.id === targetId);
-        if (dest) {
-            dest.rolls++;
-        } else {
-            // si no estaba originalmente, lo añadimos (pero en combos fijos siempre estará?)
-            this.currentRolls.push({
-                id: targetId,
-                nombre: this.allIngredients.find(i => i.id === targetId).nombre,
-                rolls: 1
-            });
-        }
-        // cerramos el panel
-        this.swapping = null;
-    },
-
-    cancelSwap() {
-        this.swapping = null;
-    }
-}));
 
 
 /* Inicia Alpine */
@@ -377,67 +415,27 @@ window.recargoRolls = {}; // número de rolls agregados (para cálculo de recarg
  * - Inicializa extras/base (antigua lógica)
  * - Inicializa rolls y recargos (nueva lógica)
  */
-window.openModal = function (id) {
-    const span = document.getElementById('precio-' + id);
-    const base = parseInt(span.dataset.basePrice, 10);
-    const qty = parseInt(span.dataset.unidades, 10);
+window.openModal = function(id) {
+  // 1) Localiza el modal estático
+  const modalEl = document.getElementById(`modal-${id}`);
+  if (!modalEl) return;
 
-    // --- Extras/Base antigua ---
-    window.basePrice[id] = base;
-    window.selectedExtras[id] = {};
-    window.removedBases[id] = {};
-    for (let u = 1; u <= qty; u++) {
-        window.selectedExtras[id][u] = [];
-        window.removedBases[id][u] = [];
-    }
+  // 2) Pídele a Alpine que inicialice tu component productModalDetails
+  //    pasando el mismo `id` al método init
+  if (modalEl.__x && modalEl.__x.$data.init) {
+    modalEl.__x.$data.init(id);
+  }
 
-    // --- Rolls intercambiables (nuevo) ---
-    window.baseRolls[id] = {};
-    window.currentRolls[id] = {};
-    window.availableRolls[id] = 0;
-    window.recargoRolls[id] = 0;
-
-    document.querySelectorAll(`#modal-${id} .chip-ingrediente`).forEach(el => {
-        const ingId = el.dataset.id;
-        const rolls = parseInt(el.dataset.rolls, 10) || 0;
-        window.baseRolls[id][ingId] = rolls;
-        window.currentRolls[id][ingId] = rolls;
-    });
-
-    // Render precio base
-    span.textContent = base.toLocaleString('es-CL');
-    document.getElementById('modal-' + id).classList.remove('hidden');
+  // 3) Y por último hazlo visible
+  modalEl.classList.remove('hidden');
 };
+
+
 
 window.closeModal = function (id) {
     document.getElementById('modal-' + id).classList.add('hidden');
 };
 
-window.toggleBase = function (id, unit, ingredient) {
-    const cb = document.getElementById(`${ingredient}-${id}-unit-${unit}`);
-    const arr = window.removedBases[id][unit] || [];
-    if (!cb.checked) arr.push(ingredient);
-    else window.removedBases[id][unit] = arr.filter(i => i !== ingredient);
-};
-
-window.toggleExtra = function (id, unit, ingredient, price) {
-    const cb = document.getElementById(`extra-${id}-unit-${unit}-${ingredient}`);
-    const arr = window.selectedExtras[id][unit] || [];
-    if (cb.checked) {
-        if (arr.length < 3) arr.push({
-            ingredient,
-            price
-        });
-        else {
-            cb.checked = false;
-            showToast('Solo puedes elegir hasta 3 ingredientes adicionales por unidad.', 'error');
-            return;
-        }
-    } else {
-        window.selectedExtras[id][unit] = arr.filter(item => item.ingredient !== ingredient);
-    }
-    window.updatePrice(id);
-};
 
 window.updatePrice = function (id) {
     const span = document.getElementById('precio-' + id);
@@ -490,7 +488,7 @@ window.incrementRoll = function (prodId, ingId) {
 };
 
 window.addToCart = async function (id) {
-  console.log('🛒 addToCart llamado con id =', id);
+    console.log('🛒 addToCart llamado con id =', id);
     const span = document.getElementById('precio-' + id);
     const qty = parseInt(span.dataset.unidades, 10) || 1;
     const extras = window.selectedExtras[id] || {};
