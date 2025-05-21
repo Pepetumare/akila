@@ -211,83 +211,108 @@ document.addEventListener('alpine:init', () => {
     //     }
     // }));
 
-    Alpine.data('productModalDetails', (assigned, allIngredients, basePrice) => ({
-        assigned,
-        allIngredients,
-        basePrice, // ⚠️ antes ponías `price`
-        baseRolls: {},
-        currentRolls: {},
-        availableRolls: 0,
-        recargoRolls: 0,
-        swapping: null,
+Alpine.data('productModalDetails', (assigned, allIngredients, basePrice) => ({
+    // — Parámetros inyectados —
+    assigned,
+    allIngredients,
+    basePrice,
 
-        init(prodId) {
-            // 1) Inicializa baseRolls y currentRolls
-            this.baseRolls = {};
-            this.currentRolls = {};
-            this.assigned.forEach(i => {
-                this.baseRolls[i.id] = i.rolls;
-                this.currentRolls[i.id] = i.rolls;
-            });
+    // — Estado interno —
+    baseRolls: {},      
+    currentRolls: {},   
+    availableRolls: 0,
+    recargoRolls: 0,
+    swapping: null,
+    removedBases: {},          // ★
 
-            // 2) Relee el precio base del DOM (si quisieras)
-            const precioFromAttr = parseInt(
-                document.getElementById(`precio-${prodId}`) ?.dataset.basePrice,
-                10
-            );
-            if (!isNaN(precioFromAttr)) {
-                this.basePrice = precioFromAttr;
-            }
+    init(prodId) {
+        // 1) Monta baseRolls y currentRolls
+        this.baseRolls = {};
+        this.currentRolls = {};
+        this.assigned.forEach(i => {
+            this.baseRolls[i.id] = i.rolls;
+            this.currentRolls[i.id] = i.rolls;
+            // Inicializa removedBases a false
+            this.removedBases[i.id] = false;    // ★
+        });
 
-            // 3) Calcula disponibles y recargo
-            this.updateAvailable();
-        },
-
-        updateAvailable() {
-            const sumBase = Object.values(this.baseRolls).reduce((a, b) => a + b, 0);
-            const sumCurrent = Object.values(this.currentRolls).reduce((a, b) => a + b, 0);
-            this.availableRolls = sumBase - sumCurrent;
-            this.recargoRolls = Object.entries(this.currentRolls)
-                .reduce((acc, [id, curr]) => {
-                    const delta = curr - (this.baseRolls[id] || 0);
-                    return acc + (delta > 0 ? delta : 0);
-                }, 0);
-        },
-
-        get availableToSwap() {
-            return this.allIngredients.filter(i => i.id !== this.swapping);
-        },
-
-        getName(id) {
-            const found = this.assigned.find(i => i.id === id);
-            return found ? found.nombre : '';
-        },
-
-        startSwap(id) {
-            if (this.currentRolls[id] > 0) {
-                this.swapping = id;
-            }
-        },
-
-        doSwap(targetId) {
-            this.currentRolls[this.swapping]--;
-            this.currentRolls[targetId] = (this.currentRolls[targetId] || 0) + 1;
-            this.swapping = null;
-            this.updateAvailable();
-        },
-
-        cancelSwap() {
-            this.swapping = null;
-        },
-
-        addToCart(id) {
-            window.addToCart(id); // tu función de fetch
-        },
-
-        closeModal(id) {
-            document.getElementById(`modal-${id}`) ?.classList.add('hidden');
+        // 2) Precio base del DOM
+        const precioFromAttr = parseInt(
+            document.getElementById(`precio-${prodId}`)?.dataset.basePrice, 10
+        );
+        if (!isNaN(precioFromAttr)) {
+            this.basePrice = precioFromAttr;
         }
-    }));
+
+        // 3) Calcula disponibles y recargo
+        this.updateAvailable();
+
+        // 4) Vigila cambios en removedBases para recalcular
+        Object.keys(this.removedBases).forEach(id => {
+            this.$watch(`removedBases.${id}`, value => {
+                const ingId = parseInt(id, 10);
+                if (value) {
+                    // Si se quita la base, elimina esos rolls
+                    this.currentRolls[ingId] = 0;
+                    this.baseRolls[ingId] = 0;
+                } else {
+                    // Si se vuelve a agregar, restablece al original
+                    const orig = this.assigned.find(i => i.id === ingId).rolls;
+                    this.baseRolls[ingId] = orig;
+                    this.currentRolls[ingId] = orig;
+                }
+                this.updateAvailable();
+            });
+        });
+    },
+
+    updateAvailable() {
+        // Calcula con baseRolls y currentRolls
+        const sumBase = Object.values(this.baseRolls).reduce((a,b) => a + b, 0);
+        const sumCurr = Object.values(this.currentRolls).reduce((a,b) => a + b, 0);
+        this.availableRolls = sumBase - sumCurr;
+        this.recargoRolls = Object.entries(this.currentRolls)
+            .reduce((acc,[id,curr]) => {
+                const delta = curr - (this.baseRolls[id]||0);
+                return acc + (delta>0?delta:0);
+            }, 0);
+    },
+
+    get availableToSwap() {
+        return this.allIngredients.filter(i => i.id !== this.swapping);
+    },
+
+    getName(id) {
+        const found = this.assigned.find(i => i.id === id);
+        return found ? found.nombre : '';
+    },
+
+    startSwap(id) {
+        if (this.currentRolls[id] > 0) {
+            this.swapping = id;
+        }
+    },
+
+    doSwap(targetId) {
+        this.currentRolls[this.swapping]--;
+        this.currentRolls[targetId] = (this.currentRolls[targetId]||0) + 1;
+        this.swapping = null;
+        this.updateAvailable();
+    },
+
+    cancelSwap() {
+        this.swapping = null;
+    },
+
+    addToCart(id) {
+        window.addToCart(id);
+    },
+
+    closeModal(id) {
+        document.getElementById(`modal-${id}`)?.classList.add('hidden');
+    }
+}));
+
 
 
 Alpine.data('productSwapper', (assigned, allIngredients) => ({
