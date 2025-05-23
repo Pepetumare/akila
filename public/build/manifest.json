@@ -4,6 +4,11 @@
     "src": "resources/css/app.css",
     "isEntry": true
   },
+  "resources/css/custom.css": {
+    "file": "assets/custom-D_vyyDM7.css",
+    "src": "resources/css/custom.css",
+    "isEntry": true
+  },
   "resources/js/app.js": {
     "file": "assets/app-96Wrjk6-.js",
     "name": "app",
