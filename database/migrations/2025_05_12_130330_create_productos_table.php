@@ -21,6 +21,7 @@ return new class extends Migration
             $table->boolean('personalizable')->default(false);
             $table->timestamps();
         });
+        
     }
     
     /**

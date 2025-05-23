@@ -51,12 +51,16 @@ class Producto extends Model
         return $this->belongsTo(Categoria::class);
     }
 
+    public function envolturas()
+    {
+
+    }
+
     // Relación muchos a muchos con Ingredientes (con cantidad_permitida)
     public function ingredientes()
     {
-        return $this->belongsToMany(Ingrediente::class, 'ingrediente_producto')
-            ->withPivot('cantidad_permitida')
-            ->withTimestamps();
+        return $this->belongsToMany(Ingrediente::class)
+                ->withPivot('cantidad_permitida');
     }
 
     // Relación “swappables” (opcionalmente podrías incluir pivot/timestamps)

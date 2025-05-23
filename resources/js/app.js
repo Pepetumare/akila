@@ -1,217 +1,213 @@
-// resources/js/app.js
-
 import Alpine from 'alpinejs';
 import focus from '@alpinejs/focus';
 
 window.Alpine = Alpine;
 Alpine.plugin(focus);
 
-/* ════════════════════════════════════════════════
-   ▸ 1. COMPONENTE productModalAdmin
-╚════════════════════════════════════════════════ */
-window.productModalAdmin = () => ({
-    categorias: window.akila ?.categorias ?? {},
-    ingredientes: window.akila ?.ingredientes ?? [],
+// Inicializamos componentes Alpine cuando se dispara el evento alpine:init
+document.addEventListener('alpine:init', () => {
+  /* ════════════════════════════════════════
+     COMPONENTE productModalAdmin
+  ════════════════════════════════════════ */
+  Alpine.data('productModalAdmin', () => ({
+    // Datos inyectados desde Blade
+    categorias: window.akila?.categorias   ?? {},
+    wrappers:   window.akila?.wrappers     ?? [],
+    proteins:   window.akila?.proteins     ?? [],
+    vegetables: window.akila?.vegetables   ?? [],
+
+    // Estado de modales
     activeModal: null,
+
+    // Rutas dinámicas
+    get editAction()   { return `/admin/productos/${this.form.id}`; },
+    get deleteAction() { return `/admin/productos/${this.form.id}`; },
+
+    // Form data
     form: {
+      id: null,
+      nombre: '',
+      descripcion: '',
+      precio: 0,
+      categoria_id: null,
+      personalizable: false,
+      unidades: 1,
+      imagen: null,
+      imagenPreview: null,
+      envolturas: [],
+      proteinas: [],
+      vegetales: [],
+      cantidad_proteina: {},
+      cantidad_vegetal: {}
+    },
+
+    // Abrir modal de creación
+    openCreate() {
+      this.form.envolturas = []
+      this.resetForm();
+      this.form.categoria_id = Object.keys(this.categorias)[0] ?? null;
+      this.activeModal = 'create';
+      this.$nextTick(() => {
+        const input = this.$el.querySelector('input[name="nombre"]');
+        input?.focus();
+      });
+    },
+
+    // Abrir modal de edición
+    openEdit(id, nombre, categoriaId, precio, personalizable, unidades, wrapsPivot, protPivot, vegPivot) {
+      this.resetForm();
+      this.form.id             = id;
+      this.form.nombre         = nombre;
+      this.form.categoria_id   = categoriaId;
+      this.form.precio         = precio;
+      this.form.personalizable = personalizable;
+      this.form.unidades       = unidades;
+
+      // Envoltura única
+      this.form.envolturas = wrapsPivot.map(i => i.id);
+
+      // Proteínas y cantidades
+      this.form.proteinas = protPivot.map(i => i.id);
+      protPivot.forEach(i => {
+        this.form.cantidad_proteina[i.id] = i.pivot.cantidad_permitida;
+      });
+
+      // Vegetales y cantidades
+      this.form.vegetales = vegPivot.map(i => i.id);
+      vegPivot.forEach(i => {
+        this.form.cantidad_vegetal[i.id] = i.pivot.cantidad_permitida;
+      });
+
+      this.activeModal = 'edit';
+    },
+
+    // Abrir modal de eliminación
+    openDelete(id, nombre) {
+      this.form.id     = id;
+      this.form.nombre = nombre;
+      this.activeModal = 'delete';
+    },
+
+    // Cerrar modal
+    closeModal() {
+      this.activeModal = null;
+    },
+
+    // Resetear formulario
+    resetForm() {
+      this.form = {
         id: null,
         nombre: '',
         descripcion: '',
-        precio: '',
+        precio: 0,
         categoria_id: null,
-        personalizable: true,
+        personalizable: false,
         unidades: 1,
         imagen: null,
         imagenPreview: null,
-        ingredientes_seleccionados: {},
+        envolturas: [],
+        proteinas: [],
+        vegetales: [],
+        cantidad_proteina: {},
+        cantidad_vegetal: {}
+      };
     },
 
-    /* Computed actions for form URLs */
-    get editAction() {
-        return `/admin/productos/${this.form.id}`
-    },
-    get deleteAction() {
-        return `/admin/productos/${this.form.id}`
-    },
+    // Previsualizar imagen
+    onFileChange(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      this.form.imagen = file;
+      const reader = new FileReader();
+      reader.onload = e => this.form.imagenPreview = e.target.result;
+      reader.readAsDataURL(file);
+    }
+  }));
 
-    /* Open create modal */
-    openCreate() {
-        this.activeModal = 'create';
-        Object.assign(this.form, {
-            id: null,
-            nombre: '',
-            descripcion: '',
-            precio: '',
-            categoria_id: Object.keys(this.categorias)[0] ?? null,
-            personalizable: true,
-            unidades: 1,
-            imagen: null,
-            imagenPreview: null,
-            ingredientes_seleccionados: {},
-        });
-        this.$nextTick(() => this.$el.querySelector('#create_nombre') ?.focus());
-    },
+  /* ════════════════════════════════════════
+     COMPONENTE ingredienteModal
+  ════════════════════════════════════════ */
+  Alpine.data('ingredienteModal', () => ({
+    showCreateModal: false,
+    showEditModal: false,
+    showDeleteModal: false,
+    editAction: '',
+    editNombre: '',
+    editTipo: '',
+    editCosto: '',
+    deleteAction: '',
+    deleteName: '',
 
-    /* Open edit modal with data */
-    openEdit(id, nombre, categoriaId, precio, personalizable, unidades, ingredientesPivot) {
-        this.activeModal = 'edit';
-        this.form.id = id;
-        this.form.nombre = nombre;
-        this.form.descripcion = '';
-        this.form.precio = precio;
-        this.form.categoria_id = categoriaId;
-        this.form.personalizable = personalizable;
-        this.form.unidades = unidades;
-        this.form.imagen = null;
-        this.form.imagenPreview = null;
-        this.form.ingredientes_seleccionados = {};
-        ingredientesPivot.forEach(({
-            id,
-            pivot
-        }) => {
-            this.form.ingredientes_seleccionados[id] = pivot.cantidad_permitida ?? 1;
-        });
+    openCreate() { this.showCreateModal = true; },
+    closeCreate() { this.showCreateModal = false; },
+
+    openEdit(id, nombre, tipo, costo) {
+      this.editAction = `/admin/ingredientes/${id}`;
+      this.editNombre = nombre;
+      this.editTipo   = tipo;
+      this.editCosto  = costo;
+      this.showEditModal = true;
+    },
+    closeEdit() {
+      this.showEditModal = false;
+      this.editAction = this.editNombre = this.editTipo = this.editCosto = '';
     },
 
     openDelete(id, nombre) {
-        this.activeModal = 'delete';
-        this.form.id = id;
-        this.form.nombre = nombre;
+      this.deleteAction = `/admin/ingredientes/${id}`;
+      this.deleteName   = nombre;
+      this.showDeleteModal = true;
+    },
+    closeDelete() {
+      this.showDeleteModal = false;
+      this.deleteAction = this.deleteName = '';
+    }
+  }));
+
+  /* ════════════════════════════════════════
+     COMPONENTE categoryModal
+  ════════════════════════════════════════ */
+  Alpine.data('categoryModal', () => ({
+    showCreateModal: false,
+    showEditModal: false,
+    showDeleteModal: false,
+    createNombre: '',
+    editAction: '',
+    editNombre: '',
+    deleteAction: '',
+    deleteName: '',
+
+    openCreate() {
+      this.showCreateModal = true;
+      this.createNombre = '';
+    },
+    closeCreate() {
+      this.showCreateModal = false;
+      this.createNombre = '';
     },
 
-    closeModal() {
-        this.activeModal = null;
+    openEdit(id, nombre) {
+      this.editAction = `/admin/categorias/${id}`;
+      this.editNombre = nombre;
+      this.showEditModal = true;
+    },
+    closeEdit() {
+      this.showEditModal = false;
+      this.editAction = this.editNombre = '';
     },
 
-    onFileChange(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        this.form.imagen = file;
-        const reader = new FileReader();
-        reader.onload = ev => {
-            this.form.imagenPreview = ev.target.result
-        };
-        reader.readAsDataURL(file);
+    openDelete(id, nombre) {
+      this.deleteAction = `/admin/categorias/${id}`;
+      this.deleteName   = nombre;
+      this.showDeleteModal = true;
     },
-});
+    closeDelete() {
+      this.showDeleteModal = false;
+      this.deleteAction = this.deleteName = '';
+    }
+  }));
 
-/* ════════════════════════════════════════════════
-   ▸ 2. OTROS COMPONENTES Alpine
-╚════════════════════════════════════════════════ */
-document.addEventListener('alpine:init', () => {
-    /* Ingredientes Admin */
-    Alpine.data('ingredienteModal', () => ({
-        showCreateModal: false,
-        showEditModal: false,
-        showDeleteModal: false,
-        editAction: '',
-        editNombre: '',
-        editTipo: '',
-        editCosto: '',
-        deleteAction: '',
-        deleteName: '',
-        openCreate() {
-            this.showCreateModal = true
-        },
-        closeCreate() {
-            this.showCreateModal = false
-        },
-        openEdit(id, nombre, tipo, costo) {
-            this.editAction = `/admin/ingredientes/${id}`;
-            this.editNombre = nombre;
-            this.editTipo = tipo;
-            this.editCosto = costo;
-            this.showEditModal = true;
-        },
-        closeEdit() {
-            this.showEditModal = false;
-            this.editAction = this.editNombre = this.editTipo = this.editCosto = '';
-        },
-        openDelete(id, nombre) {
-            this.deleteAction = `/admin/ingredientes/${id}`;
-            this.deleteName = nombre;
-            this.showDeleteModal = true;
-        },
-        closeDelete() {
-            this.showDeleteModal = false;
-            this.deleteAction = this.deleteName = '';
-        },
-    }));
-
-    /* Categorías Admin */
-    Alpine.data('categoryModal', () => ({
-        showCreateModal: false,
-        showEditModal: false,
-        showDeleteModal: false,
-        createNombre: '',
-        editAction: '',
-        editNombre: '',
-        deleteAction: '',
-        deleteName: '',
-        openCreate() {
-            this.showCreateModal = true;
-            this.createNombre = '';
-        },
-        closeCreate() {
-            this.showCreateModal = false;
-            this.createNombre = '';
-        },
-        openEdit(id, nombre) {
-            this.editAction = `/admin/categorias/${id}`;
-            this.editNombre = nombre;
-            this.showEditModal = true;
-        },
-        closeEdit() {
-            this.showEditModal = false;
-            this.editAction = this.editNombre = '';
-        },
-        openDelete(id, nombre) {
-            this.deleteAction = `/admin/categorias/${id}`;
-            this.deleteName = nombre;
-            this.showDeleteModal = true;
-        },
-        closeDelete() {
-            this.showDeleteModal = false;
-            this.deleteAction = this.deleteName = '';
-        },
-    }));
-
-    // /* Modal público de Producto */
-    // Alpine.data('productModal', () => ({
-    //     isOpen: false,
-    //     title: '',
-    //     bodyHtml: '',
-    //     openModal(id) {
-    //         this.isOpen = true;
-    //         this.title = 'Cargando...';
-    //         this.bodyHtml = '<div class="text-center p-4"><div class="spinner-border text-danger"></div></div>';
-    //         const modalEl = document.getElementById('productoModal');
-    //         this.modalInstance = new bootstrap.Modal(modalEl);
-    //         this.modalInstance.show();
-
-    //         fetch(`/producto/modal/${id}`)
-    //             .then(res => res.ok ? res.text() : Promise.reject())
-    //             .then(html => {
-    //                 this.bodyHtml = html;
-    //                 const tmp = document.createElement('div');
-    //                 tmp.innerHTML = html;
-    //                 const h = tmp.querySelector('#modal-producto-titulo');
-    //                 this.title = h ? h.textContent : 'Detalle del producto';
-    //                 setTimeout(() => window.inicializarModalProducto ?.(), 50);
-    //             })
-    //             .catch(() => {
-    //                 this.bodyHtml = '<p class="text-danger p-4">Error al cargar el producto.</p>';
-    //                 this.title = 'Error';
-    //             });
-    //     },
-    //     closeModal() {
-    //         this.isOpen && this.modalInstance.hide();
-    //         this.isOpen = false;
-    //         this.title = this.bodyHtml = '';
-    //     }
-    // }));
-
-Alpine.data('productModalDetails', (assigned, allIngredients, basePrice) => ({
+  Alpine.data('productModalDetails', (assigned, allIngredients, basePrice) => ({
     // — Parámetros inyectados —
     assigned,
     allIngredients,
@@ -314,114 +310,77 @@ Alpine.data('productModalDetails', (assigned, allIngredients, basePrice) => ({
 }));
 
 
+  /* ════════════════════════════════════════
+     COMPONENTE productSwapper
+  ════════════════════════════════════════ */
+  Alpine.data('productSwapper', (assigned, allIngredients) => ({
+    assigned,
+    allIngredients,
+    baseRolls: {},
+    currentRolls: [],
+    swapping: null,
 
-Alpine.data('productSwapper', (assigned, allIngredients) => ({
-  // — Parámetros inyectados —
-  assigned,         // [ {id,nombre,rolls}, … ]
-  allIngredients,   // [ {id,nombre}, … ]
+    get availableRolls() {
+      const sumBase = Object.values(this.baseRolls).reduce((a,b) => a + b, 0);
+      const sumCurr = this.currentRolls.reduce((a,i) => a + i.rolls, 0);
+      return sumBase - sumCurr;
+    },
+    get recargoRolls() {
+      return this.currentRolls.reduce((acc, cur) => {
+        const base = this.baseRolls[cur.id] || 0;
+        const delta = cur.rolls - base;
+        return acc + (delta > 0 ? delta : 0);
+      }, 0);
+    },
+    get availableToSwap() {
+      return this.allIngredients.filter(i => i.id !== this.swapping);
+    },
 
-  // — Estado interno —
-  baseRolls: {},      // { [id]: rollsOriginales }
-  currentRolls: [],   // [ {id,nombre,rollsActuales}, … ]
-  swapping: null,     // id del ingrediente a intercambiar
+    init() {
+      this.assigned.forEach(i => this.baseRolls[i.id] = i.rolls);
+      this.currentRolls = this.assigned.map(i => ({ id: i.id, nombre: i.nombre, rolls: i.rolls }));
+    },
 
-  // — Computeds —
-  get availableRolls() {
-    const sumBase = Object.values(this.baseRolls).reduce((a,b) => a + b, 0);
-    const sumCurr = this.currentRolls.reduce((a,i) => a + i.rolls, 0);
-    return sumBase - sumCurr;
-  },
-
-  get recargoRolls() {
-    return this.currentRolls.reduce((acc, cur) => {
-      const base = this.baseRolls[cur.id] || 0;
-      const delta = cur.rolls - base;
-      return acc + (delta > 0 ? delta : 0);
-    }, 0);
-  },
-
-  get availableToSwap() {
-    // Lista de targets: todos menos el que estoy swapping
-    return this.allIngredients.filter(i => i.id !== this.swapping);
-  },
-
-  // — Inicialización —
-  init() {
-    // 1) Montar baseRolls
-    this.assigned.forEach(i => {
-      this.baseRolls[i.id] = i.rolls;
-    });
-    // 2) Montar currentRolls (clon de assigned)
-    this.currentRolls = this.assigned.map(i => ({
-      id:     i.id,
-      nombre: i.nombre,
-      rolls:  i.rolls,
-    }));
-  },
-
-  // — Acciones de swap —
-  startSwap(id) {
-    if ((this.baseRolls[id] || 0) > 0) {
-      this.swapping = id;
-    }
-  },
-
-  doSwap(targetId) {
-    // Busco y decremento en currentRolls
-    const src = this.currentRolls.find(i => i.id === this.swapping);
-    if (src && src.rolls > 0) src.rolls--;
-    // Busco o creo el destino y aumento
-    let dest = this.currentRolls.find(i => i.id === targetId);
-    if (dest) {
-      dest.rolls++;
-    } else {
-      dest = { 
-        id:     targetId,
-        nombre: this.allIngredients.find(i => i.id === targetId).nombre,
-        rolls:  1
-      };
-      this.currentRolls.push(dest);
-    }
-    this.swapping = null;
-  },
-
-  cancelSwap() {
-    this.swapping = null;
-  },
-}));
-
-
+    startSwap(id) {
+      if ((this.baseRolls[id] || 0) > 0) this.swapping = id;
+    },
+    doSwap(targetId) {
+      const src = this.currentRolls.find(i => i.id === this.swapping);
+      if (src && src.rolls > 0) src.rolls--;
+      let dest = this.currentRolls.find(i => i.id === targetId);
+      if (dest) dest.rolls++;
+      else this.currentRolls.push({ id: targetId, nombre: this.allIngredients.find(i=>i.id===targetId).nombre, rolls: 1 });
+      this.swapping = null;
+    },
+    cancelSwap() { this.swapping = null; }
+  }));
 });
 
-
-
-
-/* Inicia Alpine */
+// Iniciar Alpine
 Alpine.start();
 
 /* ════════════════════════════════════════════════
-   ▸ 3. UI & Carrito Público
+   UI GLOBAL & Carrito Público
+   (Funciones auxiliares fuera de Alpine)
 ╚════════════════════════════════════════════════ */
-// Header scroll (opacidad al hacer scroll)
-window.addEventListener('scroll', () => {
-    const header = document.querySelector('header');
-    header && header.classList.toggle('header-solid', window.scrollY > 50);
+
+// Header opacidad al hacer scroll
+document.addEventListener('scroll', () => {
+  const header = document.querySelector('header');
+  header?.classList.toggle('header-solid', window.scrollY > 50);
 });
 
 // Toast utility
 function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = [
-        'fixed', 'top-4', 'right-4', 'max-w-sm', 'w-full', 'p-4', 'mb-2', 'rounded',
-        'shadow-lg', 'text-white',
-        type === 'success' ? 'bg-green-500' : 'bg-red-500'
-    ].join(' ');
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-        toast.classList.add('opacity-0', 'transition', 'duration-500');
-        setTimeout(() => document.body.removeChild(toast), 500);
-    }, 3000);
+  const toast = document.createElement('div');
+  toast.className = ['fixed','top-4','right-4','max-w-sm','w-full','p-4','mb-2','rounded','shadow-lg','text-white',
+    type === 'success' ? 'bg-green-500' : 'bg-red-500'].join(' ');
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('opacity-0','transition','duration-500');
+    setTimeout(() => toast.remove(), 500);
+  }, 3000);
 }
 
 // Lógica antigua de extras y bases

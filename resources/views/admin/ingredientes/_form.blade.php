@@ -11,18 +11,22 @@
 <div class="mb-4">
     <label for="tipo" class="block font-medium">Tipo</label>
     <select x-model="editTipo" name="tipo" id="tipo" class="border p-2 w-full" required>
-        <option value="base" {{ old('tipo', $ingrediente->tipo ?? '') == 'base' ? 'selected' : '' }}>Base</option>
-        <option value="extra" {{ old('tipo', $ingrediente->tipo ?? '') == 'extra' ? 'selected' : '' }}>Extra</option>
+        @foreach ($tipos as $tipo)
+            <option value="{{ $tipo }}" {{ old('tipo', $ingrediente->tipo ?? '') === $tipo ? 'selected' : '' }}>
+                {{ ucfirst($tipo) }}
+            </option>
+        @endforeach
     </select>
     @error('tipo')
         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
     @enderror
 </div>
 
+
 <div class="mb-4">
     <label for="costo" class="block font-medium">Costo (solo para extras)</label>
     <input x-model="editCosto" type="number" name="costo" id="costo" class="border p-2 w-full"
-        :disabled="editTipo === 'base'" +>
+        :disabled="editTipo === 'base'" >
     @error('costo')
         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
     @enderror

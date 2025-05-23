@@ -1,14 +1,18 @@
-@extends('layouts.app')
+@extends('admin.layout')
+
+@section('title', 'Crear Ingrediente')
+@section('page-title', 'Nuevo Ingrediente')
 
 @section('content')
-<div class="container mx-auto p-6 max-w-lg">
-    <h2 class="text-2xl font-bold mb-4">Crear Ingrediente</h2>
-
-    <form action="{{ route('admin.ingredientes.store') }}" method="POST">
-        @include('admin.ingredientes._form')
-        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">
-            Guardar
-        </button>
-    </form>
-</div>
+  <form action="{{ route('admin.ingredientes.store') }}" method="POST">
+    @csrf
+    {{-- PASAMOS $tipos al partial --}}
+    @include('admin.ingredientes._form', ['tipos' => $tipos])
+    <div class="mt-4">
+      <button type="submit"
+              class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+        Guardar
+      </button>
+    </div>
+  </form>
 @endsection

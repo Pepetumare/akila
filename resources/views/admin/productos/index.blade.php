@@ -4,8 +4,8 @@
 @section('page-title', 'Gestión de Productos')
 
 @section('content')
-    <div x-data="productModalAdmin()" x-cloak class="container mx-auto p-6">
 
+    <div x-data="productModalAdmin()" x-cloak class="container mx-auto p-6">
 
         {{-- Mensaje de éxito --}}
         @if (session('success'))
@@ -43,19 +43,36 @@
                             <td class="px-6 py-4">${{ number_format($prod->precio, 0, ',', '.') }}</td>
                             <td class="px-6 py-4">{{ $prod->personalizable ? 'Sí' : 'No' }}</td>
                             <td class="px-6 py-4 text-right space-x-2">
+                                @php
+                                    // Obtenemos pivotes según tipo
+                                    $ingredientes = $prod->ingredientes;
+                                    $wrapsPivot = $ingredientes
+                                        ->where('tipo', 'envoltura')
+                                        ->map(fn($i) => ['id' => $i->id, 'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida]]);
+                                    $protPivot = $ingredientes
+                                        ->where('tipo', 'proteína')
+                                        ->map(fn($i) => ['id' => $i->id, 'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida]]);
+                                    $vegPivot = $ingredientes
+                                        ->where('tipo', 'vegetal')
+                                        ->map(fn($i) => ['id' => $i->id, 'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida]]);
+                                @endphp
+
                                 <button
                                     @click='openEdit(
-    {{ $prod->id }},
-    @json($prod->nombre),
-    {{ $prod->categoria_id ?? 'null' }},
-    {{ $prod->precio }},
-    {{ $prod->personalizable ? 'true' : 'false' }},
-    {{ $prod->unidades }},
-    @json($prod->ingredientes->map(fn($i) => ['id' => $i->id, 'pivot' => $i->pivot]))
-  )'
+                                        {{ $prod->id }},
+                                        @json($prod->nombre),
+                                        {{ $prod->categoria_id ?? 'null' }},
+                                        {{ $prod->precio }},
+                                        {{ $prod->personalizable ? 'true' : 'false' }},
+                                        {{ $prod->unidades }},
+                                        @json($wrapsPivot),
+                                        @json($protPivot),
+                                        @json($vegPivot)
+                                    )'
                                     class="text-blue-600 hover:underline">
                                     Editar
                                 </button>
+
                                 <button @click='openDelete({{ $prod->id }}, @json($prod->nombre))'
                                     class="text-red-600 hover:underline">
                                     Eliminar
@@ -144,12 +161,13 @@
 @endsection
 
 @push('scripts')
-
     <script>
         // Exponemos los datos UNA sola vez, con escape seguro
         window.akila = {
             categorias: @js($categorias),
-            ingredientes: @js($ingredientes)
+            wrappers: @js($ingredientes->where('tipo','envoltura')->values()),
+            proteins: @js($ingredientes->where('tipo','proteína')->values()),
+            vegetables: @js($ingredientes->where('tipo','vegetal')->values()),
         };
     </script>
 @endpush
