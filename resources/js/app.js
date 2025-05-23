@@ -1,3 +1,5 @@
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap';
 import Alpine from 'alpinejs';
 import focus from '@alpinejs/focus';
 
@@ -6,354 +8,358 @@ Alpine.plugin(focus);
 
 // Inicializamos componentes Alpine cuando se dispara el evento alpine:init
 document.addEventListener('alpine:init', () => {
-  /* ════════════════════════════════════════
-     COMPONENTE productModalAdmin
-  ════════════════════════════════════════ */
-  Alpine.data('productModalAdmin', () => ({
-    // Datos inyectados desde Blade
-    categorias: window.akila?.categorias   ?? {},
-    wrappers:   window.akila?.wrappers     ?? [],
-    proteins:   window.akila?.proteins     ?? [],
-    vegetables: window.akila?.vegetables   ?? [],
+    /* ════════════════════════════════════════
+       COMPONENTE productModalAdmin
+    ════════════════════════════════════════ */
+    Alpine.data('productModalAdmin', () => ({
+        // Datos inyectados desde Blade
+        categorias: window.akila ?.categorias ?? {},
+        wrappers: window.akila ?.wrappers ?? [],
+        proteins: window.akila ?.proteins ?? [],
+        vegetables: window.akila ?.vegetables ?? [],
 
-    // Estado de modales
-    activeModal: null,
+        // Estado de modales
+        activeModal: null,
 
-    // Rutas dinámicas
-    get editAction()   { return `/admin/productos/${this.form.id}`; },
-    get deleteAction() { return `/admin/productos/${this.form.id}`; },
+        // Rutas dinámicas
+        get editAction() {
+            return `/admin/productos/${this.form.id}`;
+        },
+        get deleteAction() {
+            return `/admin/productos/${this.form.id}`;
+        },
 
-    // Form data
-    form: {
-      id: null,
-      nombre: '',
-      descripcion: '',
-      precio: 0,
-      categoria_id: null,
-      personalizable: false,
-      unidades: 1,
-      imagen: null,
-      imagenPreview: null,
-      envolturas: [],
-      proteinas: [],
-      vegetales: [],
-      cantidad_proteina: {},
-      cantidad_vegetal: {}
-    },
+        // Form data
+        form: {
+            id: null,
+            nombre: '',
+            descripcion: '',
+            precio: 0,
+            categoria_id: null,
+            personalizable: false,
+            unidades: 1,
+            imagen: null,
+            imagenPreview: null,
+            envolturas: [],
+            Proteínas: [],
+            vegetales: [],
+            cantidad_proteina: {},
+            cantidad_vegetal: {}
+        },
 
-    // Abrir modal de creación
-    openCreate() {
-      this.form.envolturas = []
-      this.resetForm();
-      this.form.categoria_id = Object.keys(this.categorias)[0] ?? null;
-      this.activeModal = 'create';
-      this.$nextTick(() => {
-        const input = this.$el.querySelector('input[name="nombre"]');
-        input?.focus();
-      });
-    },
-
-    // Abrir modal de edición
-    openEdit(id, nombre, categoriaId, precio, personalizable, unidades, wrapsPivot, protPivot, vegPivot) {
-      this.resetForm();
-      this.form.id             = id;
-      this.form.nombre         = nombre;
-      this.form.categoria_id   = categoriaId;
-      this.form.precio         = precio;
-      this.form.personalizable = personalizable;
-      this.form.unidades       = unidades;
-
-      // Envoltura única
-      this.form.envolturas = wrapsPivot.map(i => i.id);
-
-      // Proteínas y cantidades
-      this.form.proteinas = protPivot.map(i => i.id);
-      protPivot.forEach(i => {
-        this.form.cantidad_proteina[i.id] = i.pivot.cantidad_permitida;
-      });
-
-      // Vegetales y cantidades
-      this.form.vegetales = vegPivot.map(i => i.id);
-      vegPivot.forEach(i => {
-        this.form.cantidad_vegetal[i.id] = i.pivot.cantidad_permitida;
-      });
-
-      this.activeModal = 'edit';
-    },
-
-    // Abrir modal de eliminación
-    openDelete(id, nombre) {
-      this.form.id     = id;
-      this.form.nombre = nombre;
-      this.activeModal = 'delete';
-    },
-
-    // Cerrar modal
-    closeModal() {
-      this.activeModal = null;
-    },
-
-    // Resetear formulario
-    resetForm() {
-      this.form = {
-        id: null,
-        nombre: '',
-        descripcion: '',
-        precio: 0,
-        categoria_id: null,
-        personalizable: false,
-        unidades: 1,
-        imagen: null,
-        imagenPreview: null,
-        envolturas: [],
-        proteinas: [],
-        vegetales: [],
-        cantidad_proteina: {},
-        cantidad_vegetal: {}
-      };
-    },
-
-    // Previsualizar imagen
-    onFileChange(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      this.form.imagen = file;
-      const reader = new FileReader();
-      reader.onload = e => this.form.imagenPreview = e.target.result;
-      reader.readAsDataURL(file);
-    }
-  }));
-
-  /* ════════════════════════════════════════
-     COMPONENTE ingredienteModal
-  ════════════════════════════════════════ */
-  Alpine.data('ingredienteModal', () => ({
-    showCreateModal: false,
-    showEditModal: false,
-    showDeleteModal: false,
-    editAction: '',
-    editNombre: '',
-    editTipo: '',
-    editCosto: '',
-    deleteAction: '',
-    deleteName: '',
-
-    openCreate() { this.showCreateModal = true; },
-    closeCreate() { this.showCreateModal = false; },
-
-    openEdit(id, nombre, tipo, costo) {
-      this.editAction = `/admin/ingredientes/${id}`;
-      this.editNombre = nombre;
-      this.editTipo   = tipo;
-      this.editCosto  = costo;
-      this.showEditModal = true;
-    },
-    closeEdit() {
-      this.showEditModal = false;
-      this.editAction = this.editNombre = this.editTipo = this.editCosto = '';
-    },
-
-    openDelete(id, nombre) {
-      this.deleteAction = `/admin/ingredientes/${id}`;
-      this.deleteName   = nombre;
-      this.showDeleteModal = true;
-    },
-    closeDelete() {
-      this.showDeleteModal = false;
-      this.deleteAction = this.deleteName = '';
-    }
-  }));
-
-  /* ════════════════════════════════════════
-     COMPONENTE categoryModal
-  ════════════════════════════════════════ */
-  Alpine.data('categoryModal', () => ({
-    showCreateModal: false,
-    showEditModal: false,
-    showDeleteModal: false,
-    createNombre: '',
-    editAction: '',
-    editNombre: '',
-    deleteAction: '',
-    deleteName: '',
-
-    openCreate() {
-      this.showCreateModal = true;
-      this.createNombre = '';
-    },
-    closeCreate() {
-      this.showCreateModal = false;
-      this.createNombre = '';
-    },
-
-    openEdit(id, nombre) {
-      this.editAction = `/admin/categorias/${id}`;
-      this.editNombre = nombre;
-      this.showEditModal = true;
-    },
-    closeEdit() {
-      this.showEditModal = false;
-      this.editAction = this.editNombre = '';
-    },
-
-    openDelete(id, nombre) {
-      this.deleteAction = `/admin/categorias/${id}`;
-      this.deleteName   = nombre;
-      this.showDeleteModal = true;
-    },
-    closeDelete() {
-      this.showDeleteModal = false;
-      this.deleteAction = this.deleteName = '';
-    }
-  }));
-
-  Alpine.data('productModalDetails', (assigned, allIngredients, basePrice) => ({
-    // — Parámetros inyectados —
-    assigned,
-    allIngredients,
-    basePrice,
-
-    // — Estado interno —
-    baseRolls: {},      
-    currentRolls: {},   
-    availableRolls: 0,
-    recargoRolls: 0,
-    swapping: null,
-    removedBases: {},          // ★
-
-    init(prodId) {
-        // 1) Monta baseRolls y currentRolls
-        this.baseRolls = {};
-        this.currentRolls = {};
-        this.assigned.forEach(i => {
-            this.baseRolls[i.id] = i.rolls;
-            this.currentRolls[i.id] = i.rolls;
-            // Inicializa removedBases a false
-            this.removedBases[i.id] = false;    // ★
-        });
-
-        // 2) Precio base del DOM
-        const precioFromAttr = parseInt(
-            document.getElementById(`precio-${prodId}`)?.dataset.basePrice, 10
-        );
-        if (!isNaN(precioFromAttr)) {
-            this.basePrice = precioFromAttr;
-        }
-
-        // 3) Calcula disponibles y recargo
-        this.updateAvailable();
-
-        // 4) Vigila cambios en removedBases para recalcular
-        Object.keys(this.removedBases).forEach(id => {
-            this.$watch(`removedBases.${id}`, value => {
-                const ingId = parseInt(id, 10);
-                if (value) {
-                    // Si se quita la base, elimina esos rolls
-                    this.currentRolls[ingId] = 0;
-                    this.baseRolls[ingId] = 0;
-                } else {
-                    // Si se vuelve a agregar, restablece al original
-                    const orig = this.assigned.find(i => i.id === ingId).rolls;
-                    this.baseRolls[ingId] = orig;
-                    this.currentRolls[ingId] = orig;
-                }
-                this.updateAvailable();
+        // Abrir modal de creación
+        openCreate() {
+            this.form.envolturas = []
+            this.resetForm();
+            this.form.categoria_id = Object.keys(this.categorias)[0] ?? null;
+            this.activeModal = 'create';
+            this.$nextTick(() => {
+                const input = this.$el.querySelector('input[name="nombre"]');
+                input ?.focus();
             });
-        });
-    },
+        },
 
-    updateAvailable() {
-        // Calcula con baseRolls y currentRolls
-        const sumBase = Object.values(this.baseRolls).reduce((a,b) => a + b, 0);
-        const sumCurr = Object.values(this.currentRolls).reduce((a,b) => a + b, 0);
-        this.availableRolls = sumBase - sumCurr;
-        this.recargoRolls = Object.entries(this.currentRolls)
-            .reduce((acc,[id,curr]) => {
-                const delta = curr - (this.baseRolls[id]||0);
-                return acc + (delta>0?delta:0);
-            }, 0);
-    },
+        // Abrir modal de edición
+        openEdit(id, nombre, descripcion, categoriaId, precio, personalizable, unidades, wrapsPivot, protPivot, vegPivot) {
+            this.resetForm();
+            this.form.id = id;
+            this.form.nombre = nombre;
+            this.form.descripcion = descripcion;
+            this.form.categoria_id = categoriaId;
+            this.form.precio = precio;
+            this.form.personalizable = personalizable;
+            this.form.unidades = unidades;
 
-    get availableToSwap() {
-        return this.allIngredients.filter(i => i.id !== this.swapping);
-    },
+            // Envoltura única
+            this.form.envolturas = wrapsPivot.map(i => i.id);
 
-    getName(id) {
-        const found = this.assigned.find(i => i.id === id);
-        return found ? found.nombre : '';
-    },
+            // **Categoría como string** para que coincida con los option.value
+            this.form.categoria_id = String(categoriaId);
 
-    startSwap(id) {
-        if (this.currentRolls[id] > 0) {
-            this.swapping = id;
+            // Proteínas y cantidades
+            this.form.Proteínas = protPivot.map(i => i.id);
+            protPivot.forEach(i => {
+                this.form.cantidad_proteina[i.id] = i.pivot.cantidad_permitida;
+            });
+
+            // Vegetales y cantidades
+            this.form.vegetales = vegPivot.map(i => i.id);
+            vegPivot.forEach(i => {
+                this.form.cantidad_vegetal[i.id] = i.pivot.cantidad_permitida;
+            });
+
+            this.activeModal = 'edit';
+        },
+
+        // Abrir modal de eliminación
+        openDelete(id, nombre) {
+            this.form.id = id;
+            this.form.nombre = nombre;
+            this.activeModal = 'delete';
+        },
+
+        // Cerrar modal
+        closeModal() {
+            this.activeModal = null;
+        },
+
+        // Resetear formulario
+        resetForm() {
+            this.form = {
+                id: null,
+                nombre: '',
+                descripcion: '',
+                precio: 0,
+                categoria_id: '',
+                personalizable: false,
+                unidades: 1,
+                imagen: null,
+                imagenPreview: null,
+                envolturas: [],
+                Proteínas: [],
+                vegetales: [],
+                cantidad_proteina: {},
+                cantidad_vegetal: {}
+            };
+        },
+
+        // Previsualizar imagen
+        onFileChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            this.form.imagen = file;
+            const reader = new FileReader();
+            reader.onload = e => this.form.imagenPreview = e.target.result;
+            reader.readAsDataURL(file);
         }
-    },
+    }));
 
-    doSwap(targetId) {
-        this.currentRolls[this.swapping]--;
-        this.currentRolls[targetId] = (this.currentRolls[targetId]||0) + 1;
-        this.swapping = null;
-        this.updateAvailable();
-    },
+    /* ════════════════════════════════════════
+       COMPONENTE ingredienteModal
+    ════════════════════════════════════════ */
+    Alpine.data('ingredienteModal', () => ({
+        showCreateModal: false,
+        showEditModal: false,
+        showDeleteModal: false,
+        editAction: '',
+        editNombre: '',
+        editTipo: '',
+        editCosto: '',
+        deleteAction: '',
+        deleteName: '',
 
-    cancelSwap() {
-        this.swapping = null;
-    },
+        openCreate() {
+            this.showCreateModal = true;
+        },
+        closeCreate() {
+            this.showCreateModal = false;
+        },
 
-    addToCart(id) {
-        window.addToCart(id);
-    },
+        openEdit(id, nombre, tipo, costo) {
+            this.editAction = `/admin/ingredientes/${id}`;
+            this.editNombre = nombre;
+            this.editTipo = tipo;
+            this.editCosto = costo;
+            this.showEditModal = true;
+        },
+        closeEdit() {
+            this.showEditModal = false;
+            this.editAction = this.editNombre = this.editTipo = this.editCosto = '';
+        },
 
-    closeModal(id) {
-        document.getElementById(`modal-${id}`)?.classList.add('hidden');
-    }
-}));
+        openDelete(id, nombre) {
+            this.deleteAction = `/admin/ingredientes/${id}`;
+            this.deleteName = nombre;
+            this.showDeleteModal = true;
+        },
+        closeDelete() {
+            this.showDeleteModal = false;
+            this.deleteAction = this.deleteName = '';
+        }
+    }));
+
+    /* ════════════════════════════════════════
+       COMPONENTE categoryModal
+    ════════════════════════════════════════ */
+    Alpine.data('categoryModal', () => ({
+        showCreateModal: false,
+        showEditModal: false,
+        showDeleteModal: false,
+        createNombre: '',
+        editAction: '',
+        editNombre: '',
+        deleteAction: '',
+        deleteName: '',
+
+        openCreate() {
+            this.showCreateModal = true;
+            this.createNombre = '';
+        },
+        closeCreate() {
+            this.showCreateModal = false;
+            this.createNombre = '';
+        },
+
+        openEdit(id, nombre) {
+            this.editAction = `/admin/categorias/${id}`;
+            this.editNombre = nombre;
+            this.showEditModal = true;
+        },
+        closeEdit() {
+            this.showEditModal = false;
+            this.editAction = this.editNombre = '';
+        },
+
+        openDelete(id, nombre) {
+            this.deleteAction = `/admin/categorias/${id}`;
+            this.deleteName = nombre;
+            this.showDeleteModal = true;
+        },
+        closeDelete() {
+            this.showDeleteModal = false;
+            this.deleteAction = this.deleteName = '';
+        }
+    }));
+
+    Alpine.data('productModalDetails', (assigned, allIngredients, basePrice) => ({
+        // — Parámetros inyectados —
+        assigned, // Array de {id, pivot:{cantidad_permitida}}
+        allIngredients, // Todos los ingredientes (wrappers, proteins, vegetables)
+        basePrice,
+
+        // — Estado interno —
+        form: {
+            envolturas: [], // IDs de bases
+            Proteínas: [], // IDs de proteínas
+            vegetales: [], // IDs de vegetales
+        },
+        recargoRolls: 0,
+        swapping: null,
+        swapTarget: null,
+
+          init(prodId) {
+            // DEBUG: ver qué llega a Alpine
+            console.log('⚙️ [productModalDetails] assigned:', assigned)
+            console.log('⚙️ [productModalDetails] allIngredients:', allIngredients)
+
+            // 1) Bases
+            this.form.envolturas = assigned
+              .filter(i => {
+                const ing = allIngredients.find(a => a.id === i.id)
+                return ing && ing.tipo === 'envoltura'
+              })
+              .map(i => i.id)
+
+            // 2) Proteínas
+            this.form.Proteínas = assigned
+              .filter(i => {
+                const ing = allIngredients.find(a => a.id === i.id)
+                return ing && ing.tipo === 'proteina'
+              })
+              .map(i => i.id)
+            console.log('⚙️ [productModalDetails] form.Proteínas after init:', this.form.Proteínas)
+
+            // 3) Vegetales
+            this.form.vegetales = assigned
+              .filter(i => {
+                const ing = allIngredients.find(a => a.id === i.id)
+                return ing && ing.tipo === 'vegetal'
+              })
+              .map(i => i.id)
+          },
 
 
-  /* ════════════════════════════════════════
-     COMPONENTE productSwapper
-  ════════════════════════════════════════ */
-  Alpine.data('productSwapper', (assigned, allIngredients) => ({
-    assigned,
-    allIngredients,
-    baseRolls: {},
-    currentRolls: [],
-    swapping: null,
 
-    get availableRolls() {
-      const sumBase = Object.values(this.baseRolls).reduce((a,b) => a + b, 0);
-      const sumCurr = this.currentRolls.reduce((a,i) => a + i.rolls, 0);
-      return sumBase - sumCurr;
-    },
-    get recargoRolls() {
-      return this.currentRolls.reduce((acc, cur) => {
-        const base = this.baseRolls[cur.id] || 0;
-        const delta = cur.rolls - base;
-        return acc + (delta > 0 ? delta : 0);
-      }, 0);
-    },
-    get availableToSwap() {
-      return this.allIngredients.filter(i => i.id !== this.swapping);
-    },
+        getName(id) {
+            const found = this.allIngredients.find(i => i.id === id);
+            return found ? found.nombre : '';
+        },
 
-    init() {
-      this.assigned.forEach(i => this.baseRolls[i.id] = i.rolls);
-      this.currentRolls = this.assigned.map(i => ({ id: i.id, nombre: i.nombre, rolls: i.rolls }));
-    },
+        startSwap(id) {
+            this.swapping = id;
+            this.swapTarget = null;
+        },
 
-    startSwap(id) {
-      if ((this.baseRolls[id] || 0) > 0) this.swapping = id;
-    },
-    doSwap(targetId) {
-      const src = this.currentRolls.find(i => i.id === this.swapping);
-      if (src && src.rolls > 0) src.rolls--;
-      let dest = this.currentRolls.find(i => i.id === targetId);
-      if (dest) dest.rolls++;
-      else this.currentRolls.push({ id: targetId, nombre: this.allIngredients.find(i=>i.id===targetId).nombre, rolls: 1 });
-      this.swapping = null;
-    },
-    cancelSwap() { this.swapping = null; }
-  }));
+        cancelSwap() {
+            this.swapping = null;
+            this.swapTarget = null;
+        },
+
+        get availableToSwap() {
+            // Sólo proteínas distintas de la original que estamos swap
+            return this.allIngredients.filter(i =>
+                i.tipo === 'proteina' && i.id !== this.swapping
+            );
+        },
+
+        doSwap(targetId) {
+            if (!this.swapping || !targetId) return;
+            // Reemplazamos en el array de IDs
+            this.form.Proteínas = this.form.Proteínas.map(id =>
+                id === this.swapping ? targetId : id
+            );
+            this.recargoRolls++;
+            this.cancelSwap();
+        }
+    }));
+
+
+
+
+    /* ════════════════════════════════════════
+       COMPONENTE productSwapper
+    ════════════════════════════════════════ */
+    Alpine.data('productSwapper', (assigned, allIngredients) => ({
+        assigned,
+        allIngredients,
+        baseRolls: {},
+        currentRolls: [],
+        swapping: null,
+
+        get availableRolls() {
+            const sumBase = Object.values(this.baseRolls).reduce((a, b) => a + b, 0);
+            const sumCurr = this.currentRolls.reduce((a, i) => a + i.rolls, 0);
+            return sumBase - sumCurr;
+        },
+        get recargoRolls() {
+            return this.currentRolls.reduce((acc, cur) => {
+                const base = this.baseRolls[cur.id] || 0;
+                const delta = cur.rolls - base;
+                return acc + (delta > 0 ? delta : 0);
+            }, 0);
+        },
+        get availableToSwap() {
+            return this.allIngredients.filter(i => i.id !== this.swapping);
+        },
+
+        init() {
+            this.assigned.forEach(i => this.baseRolls[i.id] = i.rolls);
+            this.currentRolls = this.assigned.map(i => ({
+                id: i.id,
+                nombre: i.nombre,
+                rolls: i.rolls
+            }));
+        },
+
+        startSwap(id) {
+            if ((this.baseRolls[id] || 0) > 0) this.swapping = id;
+        },
+        doSwap(targetId) {
+            const src = this.currentRolls.find(i => i.id === this.swapping);
+            if (src && src.rolls > 0) src.rolls--;
+            let dest = this.currentRolls.find(i => i.id === targetId);
+            if (dest) dest.rolls++;
+            else this.currentRolls.push({
+                id: targetId,
+                nombre: this.allIngredients.find(i => i.id === targetId).nombre,
+                rolls: 1
+            });
+            this.swapping = null;
+        },
+        cancelSwap() {
+            this.swapping = null;
+        }
+    }));
 });
 
 // Iniciar Alpine
@@ -366,21 +372,22 @@ Alpine.start();
 
 // Header opacidad al hacer scroll
 document.addEventListener('scroll', () => {
-  const header = document.querySelector('header');
-  header?.classList.toggle('header-solid', window.scrollY > 50);
+    const header = document.querySelector('header');
+    header ?.classList.toggle('header-solid', window.scrollY > 50);
 });
 
 // Toast utility
 function showToast(message, type = 'success') {
-  const toast = document.createElement('div');
-  toast.className = ['fixed','top-4','right-4','max-w-sm','w-full','p-4','mb-2','rounded','shadow-lg','text-white',
-    type === 'success' ? 'bg-green-500' : 'bg-red-500'].join(' ');
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.classList.add('opacity-0','transition','duration-500');
-    setTimeout(() => toast.remove(), 500);
-  }, 3000);
+    const toast = document.createElement('div');
+    toast.className = ['fixed', 'top-4', 'right-4', 'max-w-sm', 'w-full', 'p-4', 'mb-2', 'rounded', 'shadow-lg', 'text-white',
+        type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    ].join(' ');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.classList.add('opacity-0', 'transition', 'duration-500');
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
 }
 
 // Lógica antigua de extras y bases
@@ -399,19 +406,19 @@ window.recargoRolls = {}; // número de rolls agregados (para cálculo de recarg
  * - Inicializa extras/base (antigua lógica)
  * - Inicializa rolls y recargos (nueva lógica)
  */
-window.openModal = function(id) {
-  // 1) Localiza el modal estático
-  const modalEl = document.getElementById(`modal-${id}`);
-  if (!modalEl) return;
+window.openModal = function (id) {
+    // 1) Localiza el modal estático
+    const modalEl = document.getElementById(`modal-${id}`);
+    if (!modalEl) return;
 
-  // 2) Pídele a Alpine que inicialice tu component productModalDetails
-  //    pasando el mismo `id` al método init
-  if (modalEl.__x && modalEl.__x.$data.init) {
-    modalEl.__x.$data.init(id);
-  }
+    // 2) Pídele a Alpine que inicialice tu component productModalDetails
+    //    pasando el mismo `id` al método init
+    if (modalEl.__x && modalEl.__x.$data.init) {
+        modalEl.__x.$data.init(id);
+    }
 
-  // 3) Y por último hazlo visible
-  modalEl.classList.remove('hidden');
+    // 3) Y por último hazlo visible
+    modalEl.classList.remove('hidden');
 };
 
 

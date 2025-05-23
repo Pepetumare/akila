@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -7,13 +8,12 @@ class OrderItem extends Model
 {
     protected $fillable = [
         'order_id',
-        'product_id',    // o 'product_id' según tu esquema
+        'product_id',
         'nombre',
         'unidades',
-        'precio_base',
-        'subtotal',       // aquí en lugar de 'price'
-        'removed_bases',
-        'extras',
+        'precio_unit',   // ← usa el nuevo nombre
+        'total',
+        'detalle',
     ];
 
     protected $casts = [

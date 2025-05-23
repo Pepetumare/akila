@@ -65,9 +65,10 @@
                 </h4>
                 <div class="grid grid-cols-3 gap-2">
                     <template x-for="opt in availableToSwap" :key="opt.id">
-                        <button type="button" class="p-2 border rounded hover:bg-gray-200" @click="doSwap(opt.id)">
+                        {{-- <button type="button" class="p-2 border rounded hover:bg-gray-200" @click="doSwap(opt.id)">
                             <span x-text="opt.nombre"></span>
-                        </button>
+                        </button> --}}
+                        <option :value="opt.id" x-text="opt.nombre"></option>
                     </template>
                 </div>
                 <button type="button" class="mt-2 text-sm text-red-600 underline" @click="cancelSwap()">Cancelar

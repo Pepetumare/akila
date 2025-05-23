@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Producto;
 use App\Models\Order;
+use App\Services\MercadoPagoService;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class CheckoutController extends Controller
 {
-    /**
-     * Mostrar formulario de checkout.
-     */
+    /* =========================================================
+     * 1. Mostrar resumen de compra
+     * =======================================================*/
     public function index(Request $request)
     {
         $cart = $request->session()->get('cart', []);
@@ -21,19 +22,19 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index');
         }
 
-        // Ya no necesitamos cargar productos; la vista usa sólo $cart
         return view('checkout.index', compact('cart'));
     }
 
-    /**
-     * Procesar el pedido: validar, guardar Order y OrderItems, generar PDF y redirigir al thank you.
-     */
-    public function store(Request $request)
+    /* =========================================================
+     * 2. Guardar pedido, generar PDF y vaciar carrito
+     * =======================================================*/
+    public function store(Request $request, MercadoPagoService $mp)
     {
         $data = $request->validate([
             'cliente_nombre'      => 'required|string|max:255',
             'cliente_telefono'    => 'required|string|max:20',
             'cliente_comentarios' => 'nullable|string',
+            'cliente_direccion' => 'required|string|max:255',
         ]);
 
         $cart = $request->session()->get('cart', []);
@@ -41,12 +42,12 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index');
         }
 
-        // Calcular subtotal y total (aquí no consideramos envío)
-        $subtotal = collect($cart)->sum(fn($i) => $i['total_price']);
-        $total    = $subtotal;
+        $subtotal = collect($cart)->sum('total');   // ← cambio
+        $total    = $subtotal;                      // (sin envío aún)
 
+        /* ---------- Transacción BD ---------- */
         DB::transaction(function () use ($data, $cart, $subtotal, $total, &$order) {
-            // Crear Order
+            /* Crear Order principal */
             $order = Order::create([
                 'cliente_nombre'      => $data['cliente_nombre'],
                 'cliente_telefono'    => $data['cliente_telefono'],
@@ -56,58 +57,63 @@ class CheckoutController extends Controller
                 'status'              => 'pendiente',
             ]);
 
-            // Crear OrderItems
+            /* Crear cada OrderItem */
             foreach ($cart as $item) {
                 $order->items()->create([
-                    'product_id'    => $item['id'],             // ← ¡No olvides esto!
-                    'nombre'        => $item['nombre'],
-                    'unidades'      => $item['unidades'],
-                    'precio_base'   => $item['base_price'],
-                    'subtotal'      => $item['total_price'],
-                    'removed_bases' => $item['removed_bases'] ?? null,
-                    'extras'        => $item['extras']        ?? null,
+                    'product_id'  => $item['producto_id'],
+                    'nombre'      => $item['nombre'],
+                    'unidades'    => $item['unidades'],
+                    'precio_unit' => $item['precio_unit'],
+                    'total'       => $item['total'],
+                    'detalle'     => json_encode($item['detalle']),
                 ]);
             }
         });
 
-        // Generar PDF de boleta y guardarlo
+        /* ---------- Generar y guardar PDF ---------- */
         $pdf      = Pdf::loadView('pdf.invoice', compact('order'))
             ->setPaper('A4', 'portrait');
         $fileName = "boletas/boleta-{$order->id}.pdf";
         Storage::disk('public')->put($fileName, $pdf->output());
 
-        // Vaciar carrito
-        $request->session()->forget('cart');
+        /* Vaciar carrito */
+        //$request->session()->forget('cart');
 
-        return redirect()->route('checkout.thankyou', $order->id);
+        // return redirect()->route('checkout.thankyou', $order->id);
+        try {
+            $initPoint = $mp->createPreference($order);
+
+            // ② Redirige al pago
+            return redirect()->away($initPoint);
+        } catch (\Exception $e) {
+            // Si Mercado Pago falla, muestra error al usuario
+            report($e);
+            return back()->withErrors('No pudimos conectar con Mercado Pago. Intenta nuevamente.');
+        }
     }
 
-    /**
-     * Página “Gracias por tu compra”.
-     */
+    /* =========================================================
+     * 3. Página de agradecimiento
+     * =======================================================*/
     public function thankYou(Order $order)
     {
         return view('checkout.thankyou', compact('order'));
     }
 
-    /**
-     * Descargar la boleta en PDF.
-     */
-
+    /* =========================================================
+     * 4. Descargar boleta PDF
+     * =======================================================*/
     public function download(Order $order)
     {
-        // Nombre relativo en disk 'public'
         $filename = "boletas/boleta-{$order->id}.pdf";
 
-        // Si no existe, lo generamos y guardamos
         if (! Storage::disk('public')->exists($filename)) {
-            $order->load('items'); // Asegura que los items estén cargados
-            $pdf = Pdf::loadView('checkout.boleta', compact('order'))
+            $order->load('items');
+            $pdf = Pdf::loadView('pdf.invoice', compact('order'))
                 ->setPaper('A4', 'portrait');
             Storage::disk('public')->put($filename, $pdf->output());
         }
 
-        // Devolver descarga desde el disk público
         return Storage::disk('public')->download(
             $filename,
             "boleta-{$order->id}.pdf",

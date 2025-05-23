@@ -9,46 +9,60 @@ use Illuminate\Http\Request;
 
 class ProductoController extends Controller
 {
-    public function index($filter = null)
+    // Método principal para mostrar productos filtrados y ordenados
+    public function index(Request $request)
     {
         $query = Producto::query();
 
-        // Filtros opcionales
-        switch ($filter) {
+        // Filtrar por categoría si se especifica
+        if ($request->filled('filter')) {
+            $query->whereHas('categoria', function ($q) use ($request) {
+                $q->where('slug', $request->filter);
+            });
+        }
+
+        // Aplicar filtros de ordenación si se especifican
+        switch ($request->input('sort')) {
             case 'price_asc':
                 $query->orderBy('precio', 'asc');
                 break;
             case 'price_desc':
                 $query->orderBy('precio', 'desc');
                 break;
-            case 'name_asc':
-                $query->orderBy('nombre', 'asc');
-                break;
             case 'name_desc':
                 $query->orderBy('nombre', 'desc');
                 break;
+            case 'name_asc':
             default:
                 $query->orderBy('nombre', 'asc');
                 break;
         }
 
-        $productos = $query->with('ingredientes')->get();
-        $categorias = Categoria::all(); // 👈 esto es lo que necesitas
-        $allIngredients = Ingrediente::orderBy('nombre')->get(['id', 'nombre']);
+        // Cargar relaciones
+        $productos = $query->with('ingredientes')->paginate(12)->withQueryString();
 
-        return view('menu.index', compact('productos', 'categorias', 'allIngredients'));
+        // Cargar categorías e ingredientes para filtros y UI
+        $categorias = Categoria::all();
+        $allIngredients = Ingrediente::orderBy('nombre')->get();
+
+        // Separar ingredientes por tipo para la interfaz de usuario
+        $wrappers = $allIngredients->where('tipo', 'envoltura')->values();
+        $proteins = $allIngredients->where('tipo', 'proteina')->values();
+        $vegetables = $allIngredients->where('tipo', 'vegetal')->values();
+
+        return view('menu.index', compact('productos', 'categorias', 'allIngredients', 'wrappers', 'proteins', 'vegetables'));
     }
 
-
+    // Retorna datos específicos de un producto en formato JSON
     public function show($id)
     {
-        $producto = Producto::find($id);
+        $producto = Producto::with('ingredientes')->findOrFail($id);
         return response()->json($producto);
     }
 
+    // Renderiza un modal con detalles del producto y permite personalización
     public function modal($id)
     {
-        // Traer el producto con sus ingredientes
         $producto = Producto::with('ingredientes')->findOrFail($id);
 
         // Calcular número de rolls (bloques de 10 piezas)
@@ -57,11 +71,8 @@ class ProductoController extends Controller
             $ing->pivot->rolls = intdiv($cantidad, 10);
         }
 
-        // Traer todos los ingredientes para permitir el swap
-        $allIngredients = \App\Models\Ingrediente::orderBy('nombre')
-            ->get(['id', 'nombre']);
+        $allIngredients = Ingrediente::orderBy('nombre')->get(['id', 'nombre']);
 
-        // Pasar ambos a la vista
         return view('components.modal-producto', compact('producto', 'allIngredients'));
     }
 }

@@ -1,110 +1,185 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto p-6">
-    <h2 class="text-2xl font-bold mb-4">Tu Carrito</h2>
+    @php
+        $cart = session('cart', []);
+        $total = collect($cart)->sum('total');
+    @endphp
 
-    @if(empty($cart))
-        <p>No hay productos en el carrito.</p>
-    @else
-        <table class="w-full mb-6 border">
-            <thead class="bg-gray-200">
-                <tr>
-                    <th class="p-2 text-left">Producto</th>
-                    <th class="p-2 text-center">Unidades</th>
-                    <th class="p-2 text-left">Personalización</th>
-                    <th class="p-2 text-right">Subtotal</th>
-                    <th class="p-2">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach($cart as $itemId => $item)
-                <tr class="border-b">
-                    {{-- Nombre y precio base --}}
-                    <td class="p-2">
-                        <strong>{{ $item['nombre'] }}</strong><br>
-                        <span class="text-sm text-gray-600">
-                            Precio base: ${{ number_format($item['base_price'],0,',','.') }}
-                        </span>
-                    </td>
+    <div class="container mx-auto p-6">
+        <h2 class="text-2xl font-bold mb-6">Tu Carrito</h2>
 
-                    {{-- Unidades --}}
-                    <td class="p-2 text-center">{{ $item['unidades'] }}</td>
+        {{-- flash --}}
+        @if (session('success'))
+            <div class="mb-4 p-3 rounded bg-green-100 text-green-700">
+                {{ session('success') }}
+            </div>
+        @endif
 
-                    {{-- Personalización --}}
-                    <td class="p-2">
-                        @php
-                            $removed = $item['removed_bases'] ?? [];
-                            $extras  = $item['extras'] ?? [];
-                        @endphp
+        @if (empty($cart))
+            <p class="text-gray-600">No hay productos en el carrito.</p>
+            <a href="{{ route('menu') }}" class="inline-block mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                Seguir comprando
+            </a>
+        @else
+            {{-- ============ DESKTOP TABLE ============ --}}
+            <div class="hidden md:block">
+                <table class="w-full text-sm border">
+                    <thead class="bg-gray-200 text-gray-700">
+                        <tr>
+                            <th class="p-3 text-left">Producto</th>
+                            <th class="p-3 text-center">Cant.</th>
+                            <th class="p-3 text-left">Detalles</th>
+                            <th class="p-3 text-right">Subtotal</th>
+                            <th class="p-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($cart as $line)
+                            @php($d = $line['detalle'])
+                            <tr class="border-b">
+                                {{-- Producto --}}
+                                <td class="p-3">
+                                    <div class="font-semibold">{{ $line['nombre'] }}</div>
+                                    <div class="text-xs text-gray-500">
+                                        Precio unidad: ${{ number_format($line['precio_unit'], 0, ',', '.') }}
+                                    </div>
+                                </td>
 
-                        {{-- Bases quitadas --}}
-                        @foreach($removed as $unit => $bases)
-                            @if(!empty($bases))
-                                <div class="mb-1">
-                                    <strong>Unidad {{ $unit }} quitó:</strong>
-                                    {{ implode(', ', $bases) }}
-                                </div>
+                                {{-- Cantidad --}}
+                                {{-- Cantidad + update --}}
+                                <td class="p-3 text-center">
+                                    <form action="{{ route('cart.update') }}" method="POST"
+                                        class="inline-flex items-center gap-1">
+                                        @csrf
+                                        <input type="hidden" name="hash" value="{{ $line['hash'] }}">
+
+                                        <input type="number" name="unidades" value="{{ $line['unidades'] }}" min="1"
+                                            class="w-16 border rounded px-1 py-0.5 text-center"
+                                            onchange="this.form.submit()">
+
+                                        <button type="submit" class="text-blue-500" title="Actualizar">
+                                            ⟳
+                                        </button>
+                                    </form>
+                                </td>
+
+
+                                {{-- Detalles --}}
+                                <td class="p-3">
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li><strong>Base:</strong> {{ $d['Base'] ?? '—' }}</li>
+                                        <li><strong>Proteínas:</strong>
+                                            {{ collect($d['Proteínas'] ?? [])->join(', ', ', y ') ?: '—' }}</li>
+                                        <li><strong>Vegetales:</strong>
+                                            {{ collect($d['Vegetales'] ?? [])->join(', ', ', y ') ?: '—' }}</li>
+                                        @if ($d['Sin queso'] ?? false)
+                                            <li>Sin queso crema</li>
+                                        @endif
+                                        @if ($d['Sin cebollín'] ?? false)
+                                            <li>Sin cebollín</li>
+                                        @endif
+                                    </ul>
+                                </td>
+
+                                {{-- Subtotal --}}
+                                <td class="p-3 text-right font-bold">
+                                    ${{ number_format($line['total'], 0, ',', '.') }}
+                                </td>
+
+                                {{-- Eliminar --}}
+                                <td class="p-3 text-center">
+                                    <form action="{{ route('cart.remove') }}" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="hash" value="{{ $line['hash'] }}">
+                                        <button class="text-red-600 hover:text-red-800" title="Eliminar">✕</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            {{-- ============ MOBILE CARDS ============ --}}
+            <div class="md:hidden space-y-4">
+                @foreach ($cart as $line)
+                    @php($d = $line['detalle'])
+                    <div class="border rounded-lg p-4 shadow-sm">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 class="font-semibold">{{ $line['nombre'] }}</h3>
+                                <span class="text-xs text-gray-500">
+                                    x
+                                    <form action="{{ route('cart.update') }}" method="POST" class="inline">
+                                        @csrf
+                                        <input type="hidden" name="hash" value="{{ $line['hash'] }}">
+                                        <input type="number" name="unidades" value="{{ $line['unidades'] }}"
+                                            min="1" class="w-12 border rounded px-1 py-0.5 text-center"
+                                            onchange="this.form.submit()">
+                                    </form>
+                                </span>
+
+                            </div>
+                            <form action="{{ route('cart.remove') }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="hash" value="{{ $line['hash'] }}">
+                                <button class="text-red-600 text-lg leading-none">✕</button>
+                            </form>
+                        </div>
+
+                        <ul class="text-sm text-gray-700 space-y-1 mb-2">
+                            <li><strong>Base:</strong> {{ $d['Base'] ?? '—' }}</li>
+                            <li><strong>Prot.:</strong> {{ collect($d['Proteínas'] ?? [])->join(', ') ?: '—' }}</li>
+                            <li><strong>Veg.:</strong> {{ collect($d['Vegetales'] ?? [])->join(', ') ?: '—' }}</li>
+                            @if ($d['Sin queso'] ?? false)
+                                <li>Sin queso crema</li>
                             @endif
-                        @endforeach
+                            @if ($d['Sin cebollín'] ?? false)
+                                <li>Sin cebollín</li>
+                            @endif
+                        </ul>
 
-                        {{-- Extras --}}
-                        @foreach($extras as $unit => $extrasUnit)
-                            @foreach($extrasUnit as $extra)
-                                <div class="mb-1">
-                                    <strong>Unidad {{ $unit }} extra:</strong>
-                                    {{ $extra['nombre'] }}
-                                    ×{{ $extra['cantidad'] }}
-                                    — ${{ number_format($extra['price'] * $extra['cantidad'],0,',','.') }}
-                                </div>
-                            @endforeach
-                        @endforeach
+                        <div class="text-right font-bold">
+                            ${{ number_format($line['total'], 0, ',', '.') }}
+                        </div>
+                    </div>
+                @endforeach
+            </div>
 
-                        {{-- Sin personalización --}}
-                        @if(empty($removed) && empty(array_filter($extras)))
-                            <span class="text-gray-500">Sin personalización</span>
-                        @endif
-                    </td>
+            {{-- ============ ACCIONES GENERALES ============ --}}
+            <div class="mt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                {{-- Vaciar --}}
+                <form action="{{ route('cart.clear') }}" method="POST">
+                    @csrf
+                    <button class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
+                        Vaciar carrito
+                    </button>
+                </form>
 
-                    {{-- Subtotal por item --}}
-                    <td class="p-2 text-right font-bold">
-                        ${{ number_format($item['total_price'],0,',','.') }}
-                    </td>
+                {{-- Total --}}
+                <div class="text-xl font-extrabold">
+                    Total: ${{ number_format($total, 0, ',', '.') }} CLP
+                </div>
 
-                    {{-- Eliminar item --}}
-                    <td class="p-2 text-center">
-                        <form action="{{ route('cart.remove') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="item_id" value="{{ $itemId }}">
-                            <button type="submit"
-                                    class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
-                                Eliminar
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-            @endforeach
-            </tbody>
-        </table>
+                {{-- Checkout --}}
+                <a href="{{ route('checkout.index') }}"
+                    class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 text-center">
+                    Ir a pagar
+                </a>
+            </div>
+        @endif
+    </div>
 
-        {{-- Vaciar carrito --}}
-        <form action="{{ route('cart.clear') }}" method="POST" class="mb-4">
-            @csrf
-            <button type="submit" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">
-                Vaciar Carrito
-            </button>
-        </form>
+    @push('scripts')
+        <script>
+            /* Envía en cuanto el usuario abandona el input (desktop fallback) */
+            document.querySelectorAll('input[name="unidades"]').forEach(inp => {
+                inp.addEventListener('blur', e => {
+                    if (e.target.form) e.target.form.submit();
+                });
+            });
+        </script>
+    @endpush
 
-        {{-- Total general --}}
-        <div class="text-right text-2xl font-bold mb-6">
-            Total: ${{ number_format($total,0,',','.') }}
-        </div>
-
-        {{-- Finalizar compra --}}
-        <a href="{{ route('checkout.index') }}"
-           class="inline-block bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600">
-            Finalizar Compra
-        </a>
-    @endif
-</div>
 @endsection

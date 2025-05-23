@@ -15,7 +15,7 @@ class IngredienteProductoSeeder extends Seeder
         // Ejemplo para los Hand Rolls (puedes extender a todos los productos según su tipo)
         $handRolls = Producto::whereIn('slug', ['3-hand-rolls','4-hand-rolls','5-hand-rolls','tradicional','relleno-doble','xl','lo-nuevo'])->get();
         $vegetales = Ingrediente::where('tipo','vegetal')->pluck('id')->all();
-        $proteinas = Ingrediente::where('tipo','proteina')->pluck('id')->all();
+        $Proteínas = Ingrediente::where('tipo','proteina')->pluck('id')->all();
 
         foreach ($handRolls as $prod) {
             $sync = [];
@@ -31,7 +31,7 @@ class IngredienteProductoSeeder extends Seeder
                 $sync[$id] = ['cantidad_permitida'=>2];
             }
             // Proteínas: max 2, pero salmón/atún/carne sólo 1
-            foreach ($proteinas as $id) {
+            foreach ($Proteínas as $id) {
                 $ing = Ingrediente::find($id);
                 $limite = in_array($ing->nombre, ['Salmon','Atún','Carne']) ? 1 : 2;
                 $sync[$id] = ['cantidad_permitida'=>$limite];

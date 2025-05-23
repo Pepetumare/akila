@@ -44,31 +44,70 @@
                             <td class="px-6 py-4">{{ $prod->personalizable ? 'Sí' : 'No' }}</td>
                             <td class="px-6 py-4 text-right space-x-2">
                                 @php
-                                    // Obtenemos pivotes según tipo
+                                    // Traer sólo los ingredientes asociados al producto
                                     $ingredientes = $prod->ingredientes;
-                                    $wrapsPivot = $ingredientes
-                                        ->where('tipo', 'envoltura')
-                                        ->map(fn($i) => ['id' => $i->id, 'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida]]);
-                                    $protPivot = $ingredientes
-                                        ->where('tipo', 'proteína')
-                                        ->map(fn($i) => ['id' => $i->id, 'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida]]);
-                                    $vegPivot = $ingredientes
-                                        ->where('tipo', 'vegetal')
-                                        ->map(fn($i) => ['id' => $i->id, 'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida]]);
+
+                                    // Para envolturas (bases)
+                                    $wrapsPivot = $ingredientes->where('tipo', 'envoltura')->map(
+                                        fn($i) => [
+                                            'id' => $i->id,
+                                            'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida],
+                                        ],
+                                    );
+
+                                    // Para proteínas, incluyo el valor del pivot
+                                    $protPivot = $ingredientes->where('tipo', 'proteina')->map(
+                                        fn($i) => [
+                                            'id' => $i->id,
+                                            'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida],
+                                        ],
+                                    );
+
+                                    // Para vegetales
+                                    $vegPivot = $ingredientes->where('tipo', 'vegetal')->map(
+                                        fn($i) => [
+                                            'id' => $i->id,
+                                            'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida],
+                                        ],
+                                    );
                                 @endphp
 
+
+                                @php
+                                    // dentro del bucle @foreach ($productos as $prod)
+                                    $ingredientes = $prod->ingredientes;
+                                    $wrapsPivot = $ingredientes->where('tipo', 'envoltura')->map(
+                                        fn($i) => [
+                                            'id' => $i->id,
+                                            'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida],
+                                        ],
+                                    );
+                                    $protPivot = $ingredientes->where('tipo', 'proteina')->map(
+                                        fn($i) => [
+                                            'id' => $i->id,
+                                            'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida],
+                                        ],
+                                    );
+                                    $vegPivot = $ingredientes->where('tipo', 'vegetal')->map(
+                                        fn($i) => [
+                                            'id' => $i->id,
+                                            'pivot' => ['cantidad_permitida' => $i->pivot->cantidad_permitida],
+                                        ],
+                                    );
+                                @endphp
                                 <button
                                     @click='openEdit(
-                                        {{ $prod->id }},
-                                        @json($prod->nombre),
-                                        {{ $prod->categoria_id ?? 'null' }},
-                                        {{ $prod->precio }},
-                                        {{ $prod->personalizable ? 'true' : 'false' }},
-                                        {{ $prod->unidades }},
-                                        @json($wrapsPivot),
-                                        @json($protPivot),
-                                        @json($vegPivot)
-                                    )'
+      {{ $prod->id }},
+      @json($prod->nombre),
+      @json($prod->descripcion ?? ''),
+      {{ $prod->categoria_id ?? '' }},
+      {{ $prod->precio }},
+      {{ $prod->personalizable ? 'true' : 'false' }},
+      {{ $prod->unidades }},
+      @json($wrapsPivot->values()),
+      @json($protPivot->values()),
+      @json($vegPivot->values())
+  )'
                                     class="text-blue-600 hover:underline">
                                     Editar
                                 </button>
@@ -165,9 +204,9 @@
         // Exponemos los datos UNA sola vez, con escape seguro
         window.akila = {
             categorias: @js($categorias),
-            wrappers: @js($ingredientes->where('tipo','envoltura')->values()),
-            proteins: @js($ingredientes->where('tipo','proteína')->values()),
-            vegetables: @js($ingredientes->where('tipo','vegetal')->values()),
+            wrappers: @js($ingredientes->where('tipo', 'envoltura')->values()),
+            proteins: @js($ingredientes->where('tipo', 'proteína')->values()),
+            vegetables: @js($ingredientes->where('tipo', 'vegetal')->values()),
         };
     </script>
 @endpush

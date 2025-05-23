@@ -13,19 +13,21 @@ class Producto extends Model
 
     protected $table = 'productos';
 
-    protected $fillable = [
-        'nombre',
-        'descripcion',
-        'precio',
-        'imagen',
-        'categoria_id',
-        'personalizable',
-        'unidades',
-        'rolls_total',
-        'rolls_envueltos',
-        'rolls_fritos',
-        // 'slug' si quieres asignarlo masivamente
-    ];
+    // protected $fillable = [
+    //     'nombre',
+    //     'descripcion',
+    //     'precio',
+    //     'imagen',
+    //     'categoria_id',
+    //     'personalizable',
+    //     'unidades',
+    //     'rolls_total',
+    //     'rolls_envueltos',
+    //     'rolls_fritos',
+    //     // 'slug' si quieres asignarlo masivamente
+    // ];
+
+    protected $guarded = [];
 
     protected $casts = [
         'personalizable' => 'boolean',

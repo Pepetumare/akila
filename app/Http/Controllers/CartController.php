@@ -3,89 +3,148 @@
 namespace App\Http\Controllers;
 
 use App\Models\Producto;
+use App\Models\Ingrediente;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class CartController extends Controller
 {
-    /**
-     * Muestra el contenido del carrito.
-     */
+    /* ========================
+     * 1. Mostrar carrito
+     * ======================*/
     public function index()
     {
-        $cart = session()->get('cart', []);
-        $total = array_reduce($cart, fn($sum, $item) => $sum + ($item['total_price'] ?? 0), 0);
+        $cart  = session('cart', []);
+        $total = array_sum(array_column($cart, 'total'));
 
         return view('cart.index', compact('cart', 'total'));
     }
 
-    /**
-     * Añade un producto personalizado al carrito.
-     */
+    /* ========================
+     * 2. Añadir / combinar
+     * ======================*/
     public function add(Request $request)
     {
         $data = $request->validate([
-            'product_id'               => 'required|exists:productos,id',
-            'unidades'                 => 'required|integer|min:1',
-            'personalization'          => 'nullable|array',
-            'personalization.rolls'    => 'nullable|array',
-            'personalization.recargo'  => 'nullable|integer|min:0',
-            'price'                    => 'required|integer|min:0',
+            'product_id'       => 'required|exists:productos,id',
+            'unidades'         => 'required|integer|min:1',
+            'base_id'          => 'required|exists:ingredientes,id',
+            'Proteínas'        => 'nullable|array',
+            'Proteínas.*'      => 'exists:ingredientes,id',
+            'vegetales'        => 'nullable|array',
+            'vegetales.*'      => 'exists:ingredientes,id',
+            'cream_cheese'     => 'sometimes|boolean',
+            'scallions'        => 'sometimes|boolean',
+            'price_adjustment' => 'nullable|integer|min:0',
         ]);
 
-        $producto = Producto::findOrFail($data['product_id']);
+        /* ==== Construir item ==== */
+        $producto         = Producto::findOrFail($data['product_id']);
+        $priceUnit        = $producto->precio + ($data['price_adjustment'] ?? 0);
+        $descripcion      = $this->buildDescription($data);
+        $hash             = $this->makeHash($data + ['product_id'=>$producto->id]);
 
-        // Construir el ítem a guardar
-        $item = [
-            'id'          => $producto->id,
-            'nombre'      => $producto->nombre,
-            'unidades'    => $data['unidades'],
-            'base_price'  => $producto->precio,
-            'total_price' => $data['price'],  // ya incluye recargo
-        ];
+        $cart = session('cart', []);
 
-        if (! empty($data['personalization'])) {
-            $item['personalization'] = [
-                'rolls'   => $data['personalization']['rolls']   ?? [],
-                'recargo' => $data['personalization']['recargo'] ?? 0,
+        if (isset($cart[$hash])) {
+            // mismo combo → sólo sumamos unidades
+            $cart[$hash]['unidades'] += $data['unidades'];
+            $cart[$hash]['total']     = $cart[$hash]['unidades'] * $priceUnit;
+        } else {
+            // nuevo ítem
+            $cart[$hash] = [
+                'hash'        => $hash,
+                'producto_id' => $producto->id,
+                'nombre'      => $producto->nombre,
+                'unidades'    => $data['unidades'],
+                'precio_unit' => $priceUnit,
+                'total'       => $priceUnit * $data['unidades'],
+                'detalle'     => $descripcion,
             ];
         }
 
-        // Agregar al carrito en sesión
-        $cart = session()->get('cart', []);
-        $cart[] = $item;
-        session()->put('cart', $cart);
+        session(['cart' => $cart]);
 
-        return response()->json([
-            'success'    => true,
-            'cart_count' => count($cart),
-        ]);
+        // al final del método add()
+return redirect()->route('cart.index')
+                 ->with('success', 'Producto agregado al carrito');
+
     }
 
-    /**
-     * Elimina un ítem del carrito.
-     */
-    public function remove(Request $request)
+    /* ========================
+     * 3. Cambiar unidades
+     * ======================*/
+    public function update(Request $request)
     {
         $request->validate([
-            'item_id' => 'required|integer',
+            'hash'     => 'required|string',
+            'unidades' => 'required|integer|min:1',
         ]);
 
-        $cart = session()->get('cart', []);
-        if (isset($cart[$request->item_id])) {
-            unset($cart[$request->item_id]);
-            // Reindexar el arreglo
-            session()->put('cart', array_values($cart));
+        $cart = session('cart', []);
+        if (! isset($cart[$request->hash])) {
+            return back()->withErrors('Ítem no encontrado');
         }
 
-        return redirect()->route('cart.index');
+        $cart[$request->hash]['unidades'] = $request->unidades;
+        $cart[$request->hash]['total']    =
+            $cart[$request->hash]['unidades'] * $cart[$request->hash]['precio_unit'];
+
+        session(['cart' => $cart]);
+
+        return back();
     }
 
-    /**
-     * Vacía todo el carrito.
-     */
-    public function clear(Request $request)
+    /* ========================
+     * 4. Eliminar ítem
+     * ======================*/
+    public function remove(Request $request)
     {
-        $request->session()->forget('cart');
-        return redirect()->route('cart.index');
+        $request->validate(['hash' => 'required|string']);
+
+        $cart = session('cart', []);
+        unset($cart[$request->hash]);
+        session(['cart' => $cart]);
+
+        return back();
+    }
+
+    /* ========================
+     * 5. Vaciar carrito
+     * ======================*/
+    public function clear()
+    {
+        session()->forget('cart');
+        return back();
+    }
+
+    /* =================================================
+     * Helpers
+     * ===============================================*/
+
+    /** Crea un hash determinista basado en la personalización */
+    private function makeHash(array $data): string
+    {
+        return hash('sha256', json_encode([
+            $data['product_id'],
+            $data['base_id'],
+            collect($data['Proteínas'] ?? [])->sort()->values(),
+            collect($data['vegetales'] ?? [])->sort()->values(),
+            $data['cream_cheese'] ?? 0,
+            $data['scallions'] ?? 0,
+            $data['price_adjustment'] ?? 0,
+        ]));
+    }
+
+    /** Devuelve arreglo descriptivo para la vista */
+    private function buildDescription(array $data): array
+    {
+        return [
+            'Base'      => Ingrediente::find($data['base_id'])->nombre,
+            'Proteínas' => Ingrediente::findMany($data['Proteínas'] ?? [])->pluck('nombre'),
+            'Vegetales' => Ingrediente::findMany($data['vegetales'] ?? [])->pluck('nombre'),
+            'Sin queso' => !empty($data['cream_cheese']),
+            'Sin cebollín' => !empty($data['scallions']),
+        ];
     }
 }

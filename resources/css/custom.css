@@ -1,0 +1,33 @@
+[x-cloak] { display: none; }
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background-color: #dc2626; border-radius: 4px; }
+::-webkit-scrollbar-track { background: #f9fafb; }
+
+/* Mejoras visuales */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Mejoras para botones y enlaces */
+a, button {
+    transition: color 0.2s, transform 0.2s;
+}
+
+a:hover, button:hover {
+    transform: translateY(-2px);
+}
+
+/* Color blanco por defecto para enlaces en header, nav y footer */
+header a,
+footer a {
+    color: white;
+    text-decoration: none;
+}
+
+/* Cambio a amarillo solo en hover */
+header a:hover,
+footer a:hover {
+    color: #fde047; /* Tailwind amarillo-300 */
+}

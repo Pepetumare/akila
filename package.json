@@ -20,6 +20,8 @@
         "vite": "^6.2.4"
     },
     "dependencies": {
+        "@popperjs/core": "^2.11.8",
+        "bootstrap": "^5.3.6",
         "swiper": "^11.2.6"
     }
 }

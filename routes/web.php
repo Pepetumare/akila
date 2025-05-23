@@ -28,6 +28,8 @@ Route::post('/cart/add',    [CartController::class, 'add'])->name('cart.add');
 Route::get('/cart',         [CartController::class, 'index'])->name('cart.index');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
 Route::post('/cart/clear',  [CartController::class, 'clear'])->name('cart.clear');
+Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
+
 
 // Checkout
 Route::get('/checkout',                    [CheckoutController::class, 'index'])->name('checkout.index');
@@ -68,3 +70,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])
          ->name('profile');
 });
+
+
+Route::get('/pago/success/{order}',  'MercadoPagoController@success')->name('mp.success');
+Route::get('/pago/failure/{order}',  'MercadoPagoController@failure')->name('mp.failure');
+Route::get('/pago/pending/{order}',  'MercadoPagoController@pending')->name('mp.pending');
+Route::post('/webhooks/mercadopago', 'MercadoPagoController@webhook')->name('mp.webhook');

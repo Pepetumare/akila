@@ -27,7 +27,7 @@ class ProductoController extends Controller
         $productos->getCollection()->transform(function ($producto) {
             $producto->url_imagen = $producto->imagen && Storage::disk('public')->exists($producto->imagen)
                 ? Storage::disk('public')->url($producto->imagen)
-                : asset('images/default-product.png');
+                : asset('img/no_disponible.png');
             return $producto;
         });
 
@@ -48,6 +48,18 @@ class ProductoController extends Controller
             'vegetables'
         ));
     }
+    // public function index(Request $request)
+    // {
+    //     $productos = Producto::with('ingredientes')
+    //         ->orderBy('created_at', 'desc')
+    //         ->paginate(12)
+    //         ->appends($request->only('filter'));
+
+    //     $categorias = Categoria::orderBy('nombre')->get();
+
+    //     return view('menu', compact('productos', 'categorias'));
+    // }
+
 
     public function create()
     {
@@ -71,8 +83,8 @@ class ProductoController extends Controller
             'unidades'             => 'required|integer|min:1',
             'envolturas'           => 'required|array|min:1',
             'envolturas.*'         => 'exists:ingredientes,id',
-            'proteinas'            => 'nullable|array',
-            'proteinas.*'          => 'exists:ingredientes,id',
+            'Proteínas'            => 'nullable|array',
+            'Proteínas.*'          => 'exists:ingredientes,id',
             'cantidad_proteina'    => 'nullable|array',
             'cantidad_proteina.*'  => 'integer|min:1',
             'vegetales'            => 'nullable|array',
@@ -90,27 +102,27 @@ class ProductoController extends Controller
         }
 
         // —— Validación adicional de cantidades según reglas de negocio ——
-        // Proteinas:
-        foreach ($data['proteinas'] ?? [] as $id) {
-            $ing   = Ingrediente::findOrFail($id);
-            $qty   = $data['cantidad_proteina'][$id] ?? 1;
-            $max   = in_array(strtolower($ing->nombre), ['salmón', 'salmon', 'carne', 'atún', 'atun']) ? 1 : 2;
-            if ($qty > $max) {
-                throw ValidationException::withMessages([
-                    "cantidad_proteina.{$id}" => "Máximo {$max} unidad(es) permitido(s) para {$ing->nombre}."
-                ]);
-            }
-        }
-        // Vegetales:
-        foreach ($data['vegetales'] ?? [] as $id) {
-            $qty = $data['cantidad_vegetal'][$id] ?? 1;
-            if ($qty > 2) {
-                $ing = Ingrediente::findOrFail($id);
-                throw ValidationException::withMessages([
-                    "cantidad_vegetal.{$id}" => "Máximo 2 unidades permitido para {$ing->nombre}."
-                ]);
-            }
-        }
+        // Proteínas:
+        // foreach ($data['Proteínas'] ?? [] as $id) {
+        //     $ing   = Ingrediente::findOrFail($id);
+        //     $qty   = $data['cantidad_proteina'][$id] ?? 1;
+        //     $max   = in_array(strtolower($ing->nombre), ['salmón', 'salmon', 'carne', 'atún', 'atun']) ? 1 : 2;
+        //     if ($qty > $max) {
+        //         throw ValidationException::withMessages([
+        //             "cantidad_proteina.{$id}" => "Máximo {$max} unidad(es) permitido(s) para {$ing->nombre}."
+        //         ]);
+        //     }
+        // }
+        // // Vegetales:
+        // foreach ($data['vegetales'] ?? [] as $id) {
+        //     $qty = $data['cantidad_vegetal'][$id] ?? 1;
+        //     if ($qty > 2) {
+        //         $ing = Ingrediente::findOrFail($id);
+        //         throw ValidationException::withMessages([
+        //             "cantidad_vegetal.{$id}" => "Máximo 2 unidades permitido para {$ing->nombre}."
+        //         ]);
+        //     }
+        // }
 
         // Crear producto
         $producto = Producto::create([
@@ -123,7 +135,7 @@ class ProductoController extends Controller
             'imagen'         => $data['imagen'] ?? null,
         ]);
 
-        // Sincronizar envoltura + proteinas + vegetales
+        // Sincronizar envoltura + Proteínas + vegetales
         $sync = [];
         // cada base elegida por el admin
         foreach ($data['envolturas'] as $id) {
@@ -131,7 +143,7 @@ class ProductoController extends Controller
         }
 
 
-        foreach ($data['proteinas'] ?? [] as $id) {
+        foreach ($data['Proteínas'] ?? [] as $id) {
             $sync[$id] = ['cantidad_permitida' => $data['cantidad_proteina'][$id] ?? 1];
         }
         foreach ($data['vegetales'] ?? [] as $id) {
@@ -166,8 +178,8 @@ class ProductoController extends Controller
             'unidades'             => 'required|integer|min:1',
             'envolturas'           => 'required|array|min:1',
             'envolturas.*'         => 'exists:ingredientes,id',
-            'proteinas'            => 'nullable|array',
-            'proteinas.*'          => 'exists:ingredientes,id',
+            'Proteínas'            => 'nullable|array',
+            'Proteínas.*'          => 'exists:ingredientes,id',
             'cantidad_proteina'    => 'nullable|array',
             'cantidad_proteina.*'  => 'integer|min:1',
             'vegetales'            => 'nullable|array',
@@ -186,25 +198,25 @@ class ProductoController extends Controller
         }
 
         // Validación extra idéntica a store()
-        foreach ($data['proteinas'] ?? [] as $id) {
-            $ing = Ingrediente::findOrFail($id);
-            $qty = $data['cantidad_proteina'][$id] ?? 1;
-            $max = in_array(strtolower($ing->nombre), ['salmón', 'salmon', 'carne', 'atún', 'atun']) ? 1 : 2;
-            if ($qty > $max) {
-                throw ValidationException::withMessages([
-                    "cantidad_proteina.{$id}" => "Máximo {$max} unidad(es) permitido(s) para {$ing->nombre}."
-                ]);
-            }
-        }
-        foreach ($data['vegetales'] ?? [] as $id) {
-            $qty = $data['cantidad_vegetal'][$id] ?? 1;
-            if ($qty > 2) {
-                $ing = Ingrediente::findOrFail($id);
-                throw ValidationException::withMessages([
-                    "cantidad_vegetal.{$id}" => "Máximo 2 unidades permitido para {$ing->nombre}."
-                ]);
-            }
-        }
+        // foreach ($data['Proteínas'] ?? [] as $id) {
+        //     $ing = Ingrediente::findOrFail($id);
+        //     $qty = $data['cantidad_proteina'][$id] ?? 1;
+        //     $max = in_array(strtolower($ing->nombre), ['salmón', 'salmon', 'carne', 'atún', 'atun']) ? 1 : 2;
+        //     if ($qty > $max) {
+        //         throw ValidationException::withMessages([
+        //             "cantidad_proteina.{$id}" => "Máximo {$max} unidad(es) permitido(s) para {$ing->nombre}."
+        //         ]);
+        //     }
+        // }
+        // foreach ($data['vegetales'] ?? [] as $id) {
+        //     $qty = $data['cantidad_vegetal'][$id] ?? 1;
+        //     if ($qty > 2) {
+        //         $ing = Ingrediente::findOrFail($id);
+        //         throw ValidationException::withMessages([
+        //             "cantidad_vegetal.{$id}" => "Máximo 2 unidades permitido para {$ing->nombre}."
+        //         ]);
+        //     }
+        // }
 
         // Actualizar producto
         $producto->update([
@@ -224,7 +236,7 @@ class ProductoController extends Controller
             $sync[$id] = ['cantidad_permitida' => 1];
         }
 
-        foreach ($data['proteinas'] ?? [] as $id) {
+        foreach ($data['Proteínas'] ?? [] as $id) {
             $sync[$id] = ['cantidad_permitida' => $data['cantidad_proteina'][$id] ?? 1];
         }
         foreach ($data['vegetales'] ?? [] as $id) {
