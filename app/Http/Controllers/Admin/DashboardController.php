@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -17,7 +18,7 @@ class DashboardController extends Controller
         // Totales básicos
         $totalOrders     = Order::count();
         $totalCategories = Categoria::count();
-        $totalIngredients= Ingrediente::count();
+        $totalIngredients = Ingrediente::count();
         $totalProducts   = Producto::count();
 
         // Ventas del día
@@ -27,19 +28,26 @@ class DashboardController extends Controller
         // Pedidos por estado
         $ordersByStatus = Order::select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
-            ->pluck('count','status');  // colección [ 'pendiente' => 5, 'entregado' => 10, … ]
+            ->pluck('count', 'status');  // colección [ 'pendiente' => 5, 'entregado' => 10, … ]
 
         // Top 5 productos por ingresos
-        $topProducts = OrderItem::select('product_id', DB::raw('SUM(subtotal) as revenue'))
+        $topProducts = OrderItem::select(
+            'product_id',
+            DB::raw('SUM(unidades * precio_unit) AS revenue')
+        )
             ->groupBy('product_id')
             ->orderByDesc('revenue')
-            ->with('producto')
-            ->take(5)
+            ->limit(5)
             ->get();
 
         return view('admin.dashboard', compact(
-            'totalOrders','totalCategories','totalIngredients','totalProducts',
-            'salesToday','ordersByStatus','topProducts'
+            'totalOrders',
+            'totalCategories',
+            'totalIngredients',
+            'totalProducts',
+            'salesToday',
+            'ordersByStatus',
+            'topProducts'
         ));
     }
 }
