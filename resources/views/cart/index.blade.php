@@ -9,7 +9,7 @@
     <div class="container mx-auto p-6">
         <h2 class="text-2xl font-bold mb-6">Tu Carrito</h2>
 
-        {{-- flash --}}
+        {{-- Flash --}}
         @if (session('success'))
             <div class="mb-4 p-3 rounded bg-green-100 text-green-700">
                 {{ session('success') }}
@@ -22,7 +22,7 @@
                 Seguir comprando
             </a>
         @else
-            {{-- ============ DESKTOP TABLE ============ --}}
+            {{-- Rolls DESKTOP TABLE --}}
             <div class="hidden md:block">
                 <table class="w-full text-sm border">
                     <thead class="bg-gray-200 text-gray-700">
@@ -36,43 +36,63 @@
                     </thead>
                     <tbody>
                         @foreach ($cart as $line)
-                            @php($d = $line['detalle'])
+                            @php
+                                $d = $line['detalle'];
+
+                                // Agrupamos Proteínas y Vegetales
+                                $proteCounts = collect($d['Proteínas'] ?? [])
+                                    ->countBy()
+                                    ->map(fn($qty, $name) => "{$qty} Rolls de {$name}")
+                                    ->values()
+                                    ->all();
+
+                                $vegCounts = collect($d['Vegetales'] ?? [])
+                                    ->countBy()
+                                    ->map(fn($qty, $name) => "{$qty} Rolls de {$name}")
+                                    ->values()
+                                    ->all();
+                            @endphp
+
                             <tr class="border-b">
                                 {{-- Producto --}}
                                 <td class="p-3">
                                     <div class="font-semibold">{{ $line['nombre'] }}</div>
                                     <div class="text-xs text-gray-500">
-                                        Precio unidad: ${{ number_format($line['precio_unit'], 0, ',', '.') }}
+                                        Precio unidad:
+                                        ${{ number_format($line['precio_unit'], 0, ',', '.') }}
                                     </div>
                                 </td>
 
-                                {{-- Cantidad --}}
                                 {{-- Cantidad + update --}}
                                 <td class="p-3 text-center">
                                     <form action="{{ route('cart.update') }}" method="POST"
                                         class="inline-flex items-center gap-1">
                                         @csrf
                                         <input type="hidden" name="hash" value="{{ $line['hash'] }}">
-
                                         <input type="number" name="unidades" value="{{ $line['unidades'] }}" min="1"
                                             class="w-16 border rounded px-1 py-0.5 text-center"
                                             onchange="this.form.submit()">
-
                                         <button type="submit" class="text-blue-500" title="Actualizar">
                                             ⟳
                                         </button>
                                     </form>
                                 </td>
 
-
-                                {{-- Detalles --}}
+                                {{-- Rolls Detalles --}}
                                 <td class="p-3">
                                     <ul class="list-disc list-inside space-y-1">
-                                        <li><strong>Base:</strong> {{ $d['Base'] ?? '—' }}</li>
-                                        <li><strong>Proteínas:</strong>
-                                            {{ collect($d['Proteínas'] ?? [])->join(', ', ', y ') ?: '—' }}</li>
-                                        <li><strong>Vegetales:</strong>
-                                            {{ collect($d['Vegetales'] ?? [])->join(', ', ', y ') ?: '—' }}</li>
+                                        <li>
+                                            <strong>Base:</strong>
+                                            {{ $d['Base'] ?? '—' }}
+                                        </li>
+                                        <li>
+                                            <strong>Proteínas:</strong>
+                                            {{ $proteCounts ? implode(', ', $proteCounts) : '—' }}
+                                        </li>
+                                        <li>
+                                            <strong>Vegetales:</strong>
+                                            {{ $vegCounts ? implode(', ', $vegCounts) : '—' }}
+                                        </li>
                                         @if ($d['Sin queso'] ?? false)
                                             <li>Sin queso crema</li>
                                         @endif
@@ -101,10 +121,25 @@
                 </table>
             </div>
 
-            {{-- ============ MOBILE CARDS ============ --}}
+            {{-- MOBILE CARDS --}}
             <div class="md:hidden space-y-4">
                 @foreach ($cart as $line)
-                    @php($d = $line['detalle'])
+                    @php
+                        $d = $line['detalle'];
+
+                        $proteCounts = collect($d['Proteínas'] ?? [])
+                            ->countBy()
+                            ->map(fn($qty, $name) => "{$qty} Rolls de {$name}")
+                            ->values()
+                            ->all();
+
+                        $vegCounts = collect($d['Vegetales'] ?? [])
+                            ->countBy()
+                            ->map(fn($qty, $name) => "{$qty} Rolls de {$name}")
+                            ->values()
+                            ->all();
+                    @endphp
+
                     <div class="border rounded-lg p-4 shadow-sm">
                         <div class="flex justify-between items-start mb-2">
                             <div>
@@ -119,7 +154,6 @@
                                             onchange="this.form.submit()">
                                     </form>
                                 </span>
-
                             </div>
                             <form action="{{ route('cart.remove') }}" method="POST">
                                 @csrf
@@ -129,9 +163,18 @@
                         </div>
 
                         <ul class="text-sm text-gray-700 space-y-1 mb-2">
-                            <li><strong>Base:</strong> {{ $d['Base'] ?? '—' }}</li>
-                            <li><strong>Prot.:</strong> {{ collect($d['Proteínas'] ?? [])->join(', ') ?: '—' }}</li>
-                            <li><strong>Veg.:</strong> {{ collect($d['Vegetales'] ?? [])->join(', ') ?: '—' }}</li>
+                            <li>
+                                <strong>Base:</strong>
+                                {{ $d['Base'] ?? '—' }}
+                            </li>
+                            <li>
+                                <strong>Prot.:</strong>
+                                {{ $proteCounts ? implode(', ', $proteCounts) : '—' }}
+                            </li>
+                            <li>
+                                <strong>Veg.:</strong>
+                                {{ $vegCounts ? implode(', ', $vgCounts ?? $vegCounts) : '—' }}
+                            </li>
                             @if ($d['Sin queso'] ?? false)
                                 <li>Sin queso crema</li>
                             @endif
@@ -147,7 +190,7 @@
                 @endforeach
             </div>
 
-            {{-- ============ ACCIONES GENERALES ============ --}}
+            {{-- ACCIONES GENERALES --}}
             <div class="mt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 {{-- Vaciar --}}
                 <form action="{{ route('cart.clear') }}" method="POST">
@@ -173,7 +216,7 @@
 
     @push('scripts')
         <script>
-            /* Envía en cuanto el usuario abandona el input (desktop fallback) */
+            // Envía al perder foco (desktop fallback)
             document.querySelectorAll('input[name="unidades"]').forEach(inp => {
                 inp.addEventListener('blur', e => {
                     if (e.target.form) e.target.form.submit();
@@ -181,5 +224,4 @@
             });
         </script>
     @endpush
-
 @endsection

@@ -31,3 +31,7 @@ header a:hover,
 footer a:hover {
     color: #fde047; /* Tailwind amarillo-300 */
 }
+
+.old-swap {
+  @apply text-gray-500 underline;
+}

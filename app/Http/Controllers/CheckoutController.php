@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Producto;
 use App\Models\Order;
 use App\Services\MercadoPagoService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -22,19 +21,25 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index');
         }
 
-        return view('checkout.index', compact('cart'));
+        // ahora pasamos subtotal y cart a la vista
+        $subtotal = collect($cart)->sum('total');
+        return view('checkout.index', compact('cart', 'subtotal'));
     }
 
     /* =========================================================
-     * 2. Guardar pedido, generar PDF y vaciar carrito
+     * 2. Guardar pedido, generar PDF y redirigir a pago
      * =======================================================*/
     public function store(Request $request, MercadoPagoService $mp)
     {
         $data = $request->validate([
             'cliente_nombre'      => 'required|string|max:255',
             'cliente_telefono'    => 'required|string|max:20',
+            'cliente_direccion'   => 'required|string|max:255',
             'cliente_comentarios' => 'nullable|string',
-            'cliente_direccion' => 'required|string|max:255',
+            'metodo_entrega'      => 'required|in:pickup,delivery',
+            'zona_delivery'       => 'nullable|in:dentro,fuera',
+            'kms_fuera'           => 'nullable|integer|min:1',
+            'delivery_cost'       => 'required|integer|min:0',
         ]);
 
         $cart = $request->session()->get('cart', []);
@@ -42,22 +47,26 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index');
         }
 
-        $subtotal = collect($cart)->sum('total');   // ← cambio
-        $total    = $subtotal;                      // (sin envío aún)
+        $subtotal     = collect($cart)->sum('total');
+        $deliveryCost = $data['delivery_cost'];
+        $total        = $subtotal + $deliveryCost;
 
-        /* ---------- Transacción BD ---------- */
-        DB::transaction(function () use ($data, $cart, $subtotal, $total, &$order) {
-            /* Crear Order principal */
+        // Transacción para crear Order y OrderItems
+        DB::transaction(function () use ($data, $cart, $subtotal, $deliveryCost, $total, &$order) {
             $order = Order::create([
                 'cliente_nombre'      => $data['cliente_nombre'],
                 'cliente_telefono'    => $data['cliente_telefono'],
+                'cliente_direccion'   => $data['cliente_direccion'],
                 'cliente_comentarios' => $data['cliente_comentarios'] ?? null,
+                'metodo_entrega'      => $data['metodo_entrega'],
+                'zona_delivery'       => $data['zona_delivery'] ?? null,
+                'kms_fuera'           => $data['kms_fuera'] ?? null,
                 'subtotal'            => $subtotal,
+                'delivery_cost'       => $deliveryCost,
                 'total'               => $total,
                 'status'              => 'pendiente',
             ]);
 
-            /* Crear cada OrderItem */
             foreach ($cart as $item) {
                 $order->items()->create([
                     'product_id'  => $item['producto_id'],
@@ -70,23 +79,17 @@ class CheckoutController extends Controller
             }
         });
 
-        /* ---------- Generar y guardar PDF ---------- */
+        // Generar y guardar PDF de la boleta
         $pdf      = Pdf::loadView('pdf.invoice', compact('order'))
             ->setPaper('A4', 'portrait');
         $fileName = "boletas/boleta-{$order->id}.pdf";
         Storage::disk('public')->put($fileName, $pdf->output());
 
-        /* Vaciar carrito */
-        //$request->session()->forget('cart');
-
-        // return redirect()->route('checkout.thankyou', $order->id);
+        // Redirigir a Mercado Pago
         try {
             $initPoint = $mp->createPreference($order);
-
-            // ② Redirige al pago
             return redirect()->away($initPoint);
         } catch (\Exception $e) {
-            // Si Mercado Pago falla, muestra error al usuario
             report($e);
             return back()->withErrors('No pudimos conectar con Mercado Pago. Intenta nuevamente.');
         }

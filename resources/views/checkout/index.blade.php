@@ -27,8 +27,25 @@
             <h3 class="font-semibold mb-2">Tu pedido</h3>
 
             @foreach ($cart as $item)
-                @php($d = $item['detalle'])
-                @php($itemSubtotal = $item['precio_unit'] * $item['unidades'])
+                @php
+                    $d = $item['detalle'];
+                    $itemSubtotal = $item['precio_unit'] * $item['unidades'];
+
+                    // Agrupar proteínas
+                    $proteCounts = collect($d['Proteínas'] ?? [])
+                        ->countBy()
+                        ->map(fn($qty, $name) => "{$qty} de {$name}")
+                        ->values()
+                        ->all();
+
+                    // Agrupar vegetales
+                    $vegCounts = collect($d['Vegetales'] ?? [])
+                        ->countBy()
+                        ->map(fn($qty, $name) => "{$qty} de {$name}")
+                        ->values()
+                        ->all();
+                @endphp
+
                 <div class="border rounded p-3 mb-3">
                     <p class="font-semibold">
                         {{ $item['nombre'] }}
@@ -36,12 +53,17 @@
                     </p>
 
                     <ul class="text-xs text-gray-700 space-y-1 mt-1">
-                        <li><strong>Base:</strong> {{ $d['Base'] ?? '—' }}</li>
-                        <li><strong>Proteínas:</strong>
-                            {{ collect($d['Proteínas'] ?? [])->join(', ') ?: '—' }}
+                        <li>
+                            <strong>Base:</strong>
+                            {{ $d['Base'] ?? '—' }}
                         </li>
-                        <li><strong>Vegetales:</strong>
-                            {{ collect($d['Vegetales'] ?? [])->join(', ') ?: '—' }}
+                        <li>
+                            <strong>Proteínas:</strong>
+                            {{ $proteCounts ? implode(', ', $proteCounts) : '—' }}
+                        </li>
+                        <li>
+                            <strong>Vegetales:</strong>
+                            {{ $vegCounts ? implode(', ', $vegCounts) : '—' }}
                         </li>
                         @if ($d['Sin queso'] ?? false)
                             <li class="text-amber-700">Sin queso crema</li>
@@ -111,28 +133,25 @@
                     Delivery: $<span id="deliveryCost">0</span>
                 </p>
                 <p class="text-right text-lg font-bold">
-                    Total a pagar: $<span id="totalPay">{{ number_format($subtotal, 0, ',', '.') }}</span>
+                    Total a pagar: $
+                    <span id="totalPay">{{ number_format($subtotal, 0, ',', '.') }}</span>
                 </p>
             </div>
 
             {{-- Campos cliente --}}
             <div class="space-y-4">
-
-                {{-- Nombre --}}
                 <div>
                     <label for="cliente_nombre" class="block font-medium">Nombre completo:</label>
                     <input type="text" id="cliente_nombre" name="cliente_nombre" value="{{ old('cliente_nombre') }}"
                         class="border p-2 w-full" required>
                 </div>
 
-                {{-- Teléfono --}}
                 <div>
                     <label for="cliente_telefono" class="block font-medium">Teléfono:</label>
                     <input type="tel" id="cliente_telefono" name="cliente_telefono"
                         value="{{ old('cliente_telefono') }}" class="border p-2 w-full" required>
                 </div>
 
-                {{-- Dirección (nuevo) --}}
                 <div>
                     <label for="cliente_direccion" class="block font-medium">Dirección de entrega:</label>
                     <input type="text" id="cliente_direccion" name="cliente_direccion"
@@ -140,12 +159,10 @@
                         class="border p-2 w-full" required>
                 </div>
 
-                {{-- Comentarios --}}
                 <div>
                     <label for="cliente_comentarios" class="block font-medium">Comentarios (opcional):</label>
                     <textarea id="cliente_comentarios" name="cliente_comentarios" rows="3" class="border p-2 w-full">{{ old('cliente_comentarios') }}</textarea>
                 </div>
-
             </div>
 
             {{-- Hidden delivery cost para backend --}}
@@ -159,12 +176,12 @@
 
     @push('scripts')
         <script>
-            /* ---------- Parámetros ---------- */
+            /* Parámetros */
             const SUBTOTAL = {{ $subtotal }};
-            const COSTO_BASE = 2500; // fijo dentro de S.J.
-            const COSTO_POR_KM = 500; // extra por km fuera
+            const COSTO_BASE = 2500;
+            const COSTO_POR_KM = 500;
 
-            /* ---------- Elementos ---------- */
+            /* Elementos */
             const deliveryOptions = document.getElementById('deliveryOptions');
             const kmBox = document.getElementById('kmBox');
             const kmInput = document.getElementById('kms_fuera');
@@ -173,23 +190,21 @@
             const totalPayEl = document.getElementById('totalPay');
             const hiddenCost = document.getElementById('delivery_cost');
 
-            /* ---------- Lógica ---------- */
             function updateDelivery() {
                 const metodo = document.querySelector('input[name="metodo_entrega"]:checked').value;
                 let cost = 0;
 
                 if (metodo === 'delivery') {
                     deliveryOptions.classList.remove('hidden');
-
                     const zona = document.querySelector('input[name="zona_delivery"]:checked');
                     if (zona) {
                         if (zona.value === 'dentro') {
                             kmBox.classList.add('hidden');
-                            cost = COSTO_BASE; // $2 500 dentro
-                        } else { // fuera
+                            cost = COSTO_BASE;
+                        } else {
                             kmBox.classList.remove('hidden');
                             const kms = Math.max(1, Number(kmInput.value || 0));
-                            cost = COSTO_BASE + kms * COSTO_POR_KM; // $2 500 + 500 × km
+                            cost = COSTO_BASE + kms * COSTO_POR_KM;
                         }
                     }
                 } else {
@@ -197,16 +212,14 @@
                     kmBox.classList.add('hidden');
                 }
 
-                /* Actualizar UI */
                 deliveryLine.classList.toggle('hidden', cost === 0);
                 deliveryCostEl.textContent = cost.toLocaleString('de-DE');
                 totalPayEl.textContent = (SUBTOTAL + cost).toLocaleString('de-DE');
                 hiddenCost.value = cost;
             }
 
-            /* Init */
+            // Inicializa
             updateDelivery();
         </script>
     @endpush
-
 @endsection

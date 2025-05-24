@@ -5,6 +5,7 @@ namespace App\Services;
 use MercadoPago\MercadoPagoConfig;
 use MercadoPago\Client\Preference\PreferenceClient;
 use App\Models\Order;
+use MercadoPago\Net\MPDefaultHttpClient;
 
 class MercadoPagoService
 {
@@ -12,36 +13,30 @@ class MercadoPagoService
 
     public function __construct()
     {
-        // 1) Autenticación una sola vez
         MercadoPagoConfig::setAccessToken(config('services.mercadopago.access_token'));
-
-        // 2) Instancia del client
         $this->client = new PreferenceClient();
+
+        MPDefaultHttpClient::$disableSSLVerification = true;
     }
 
-    /**
-     * Crea la preferencia y devuelve la URL de Checkout Pro.
-     */
     public function createPreference(Order $order): string
     {
-        // ---- Ítems en formato array ----
-        $items = $order->items->map(fn ($it) => [
+        $items = $order->items->map(fn($it) => [
             'title'       => $it->nombre,
             'quantity'    => $it->unidades,
             'unit_price'  => (float) $it->precio_unit,
             'currency_id' => 'CLP',
         ])->all();
 
-        if ($order->envio > 0) {
+        if ($order->delivery_cost > 0) {
             $items[] = [
                 'title'       => 'Envío',
                 'quantity'    => 1,
-                'unit_price'  => (float) $order->envio,
+                'unit_price'  => (float) $order->delivery_cost,
                 'currency_id' => 'CLP',
             ];
         }
 
-        // ---- Crea la preferencia ----
         $preference = $this->client->create([
             'items'              => $items,
             'external_reference' => (string) $order->id,
@@ -50,15 +45,16 @@ class MercadoPagoService
                 'phone' => ['number' => $order->cliente_telefono],
             ],
             'back_urls' => [
-                'success' => route('mp.success',  $order->id),
-                'failure' => route('mp.failure',  $order->id),
-                'pending' => route('mp.pending',  $order->id),
+                'success' => route('checkout.success'),
+                'failure' => route('checkout.failure'),
+                'pending' => route('checkout.pending'),
             ],
             'auto_return'      => 'approved',
-            'notification_url' => route('mp.webhook'),
+            'notification_url' => route('checkout.webhook'),
         ]);
 
-        // En sandbox usa ->sandbox_init_point; en producción ->init_point
-        return $preference->sandbox_init_point;
+        return app()->environment('production')
+            ? $preference->init_point
+            : $preference->sandbox_init_point;
     }
 }
