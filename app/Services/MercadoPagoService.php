@@ -16,7 +16,7 @@ class MercadoPagoService
         MercadoPagoConfig::setAccessToken(config('services.mercadopago.access_token'));
         $this->client = new PreferenceClient();
 
-        MPDefaultHttpClient::$disableSSLVerification = true;
+        //MPDefaultHttpClient::$disableSSLVerification = true;
     }
 
     public function createPreference(Order $order): string
