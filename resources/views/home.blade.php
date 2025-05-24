@@ -27,7 +27,7 @@
                     <img src="{{ asset('img/slide2.png') }}" class="d-block w-100" alt="Slide 2">
                     <div class="carousel-caption d-none d-md-block">
                         <h2 class="display-5 fw-bold">Promociones Especiales</h2>
-                        <p>2×1 en Hand Rolls todos los martes</p>
+                        <p>Descubre nuestras promociones</p>
                         <a href="{{ route('menu', ['section' => 'promociones']) }}" class="btn btn-light">Ver Promos</a>
                     </div>
                 </div>
@@ -59,7 +59,7 @@
     <div class="text-center my-12">
         <h1 class="text-4xl md:text-5xl font-bold mb-4">¡Bienvenido a Sushi Akila!</h1>
         <p class="text-lg text-gray-700 mb-6">
-            Disfruta de los mejores sabores japoneses en la comodidad de tu hogar.
+            Una experiencia de sabores!.
         </p>
         <a href="{{ route('menu') }}"
             class="inline-block bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition">
@@ -69,9 +69,9 @@
 
     {{-- Aquí podrías agregar secciones destacadas, p.ej. favoritos, promociones, etc. --}}
     {{-- Ejemplo de sección “Favoritos” --}}
-    <section class="container mx-auto px-4 my-12">
+    {{-- <section class="container mx-auto px-4 my-12">
         <h2 class="text-2xl font-bold mb-6">Nuestros Favoritos</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"> --}}
             {{-- @foreach ($favoritos as $prod)
         <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
           <img 

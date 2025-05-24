@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>@yield('title', 'Inicio') – Sushi Akila</title>
+    <link rel="icon" href="{{ asset('img/logo/logo-icon.png') }}" type="image/x-icon">
 
     {{-- CSS y JS personalizado --}}
     @vite(['resources/css/app.css', 'resources/css/custom.css', 'resources/js/app.js'])
@@ -95,7 +96,7 @@
         <div class="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 px-6">
             <div>
                 <h5 class="font-bold mb-2">Sushi Akila</h5>
-                <p class="text-sm">Calidad y frescura en cada bocado.</p>
+                <p class="text-sm">Una experiencia de sabores.</p>
             </div>
             <div>
                 <h5 class="font-bold mb-2">Enlaces útiles</h5>
@@ -108,8 +109,8 @@
             </div>
             <div>
                 <h5 class="font-bold mb-2">Contacto</h5>
-                <p class="text-sm">📞 +56 9 1234 5678</p>
-                <p class="text-sm">📍 Av. Akila 123, Santiago</p>
+                <p class="text-sm">📞 +56 9 4505 3594</p>
+                <p class="text-sm">📍 Fernando Luis Manss 542</p>
                 <div class="mt-4 flex space-x-4">
                     <a href="#" class="hover:text-white">Facebook</a>
                     <a href="#" class="hover:text-white">Instagram</a>
