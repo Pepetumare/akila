@@ -8,12 +8,13 @@
 
     {{-- Carga única de assets con Vite --}}
     {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
-    <link rel="stylesheet" href="{{ asset('build/assets/app-DAbrQYtJ.css') }}">
-    <link rel="stylesheet" href="{{ asset('build/assets/app-BVg9DDeF.css') }}">
-    <link rel="stylesheet" href="{{ asset('build/assets/custom-C4u8XpP7.css') }}">
+    @php
+        $manifest = json_decode(file_get_contents(public_path('build/manifest.json')), true);
+    @endphp
 
-    <!-- JS -->
-    <script src="{{ asset('build/assets/app-96Wrjk6-.js') }}" type="module"></script>
+    <link rel="stylesheet" href="{{ asset('build/' . $manifest['resources/css/app.css']['file']) }}">
+    <script type="module" src="{{ asset('build/' . $manifest['resources/js/app.js']['file']) }}"></script>
+
 </head>
 
 <body x-data="{ sidebarOpen: false }" class="min-h-screen">

@@ -10,15 +10,7 @@
     <link rel="icon" href="{{ asset('img/logo/logo-icon.png') }}" type="image/x-icon">
 
     {{-- CSS y JS personalizado --}}
-    {{-- @vite(['resources/css/app.css', 'resources/css/custom.css', 'resources/js/app.js']) --}}
-    <!-- CSS -->
-    <link rel="stylesheet" href="{{ asset('build/assets/app-DAbrQYtJ.css') }}">
-    <link rel="stylesheet" href="{{ asset('build/assets/app-BVg9DDeF.css') }}">
-    <link rel="stylesheet" href="{{ asset('build/assets/custom-C4u8XpP7.css') }}">
-
-    <!-- JS -->
-    <script src="{{ asset('build/assets/app-96Wrjk6-.js') }}" type="module"></script>
-
+    @vite(['resources/css/app.css', 'resources/css/custom.css', 'resources/js/app.js'])
 </head>
 
 <body class="flex flex-col min-h-screen font-sans bg-gray-100 text-gray-800">
