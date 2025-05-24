@@ -102,6 +102,7 @@ Route::prefix('admin')
 // ───────────────────────────────────────────────────────────────
 
 Route::middleware('auth')->group(function () {
-     Route::get('profile', [ProfileController::class, 'show'])
-          ->name('profile');
+    Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('profile/pedidos', [ProfileController::class, 'orders'])->name('profile.orders');
 });

@@ -36,7 +36,7 @@
                     <a href="{{ route('login') }}" class="hover:text-yellow-300">Ingresar</a>
                     <a href="{{ route('register') }}" class="hover:text-yellow-300">Registrarse</a>
                 @else
-                    <a href="{{ route('profile') }}" class="hover:text-yellow-300">Mi Cuenta</a>
+                    <a href="{{ route('profile.edit') }}" class="hover:text-yellow-300">Mi Cuenta</a>
                 @endguest
 
                 <!-- Carrito -->
@@ -71,7 +71,7 @@
                 <a href="{{ route('login') }}" class="block py-2 hover:text-yellow-300">Ingresar</a>
                 <a href="{{ route('register') }}" class="block py-2 hover:text-yellow-300">Registrarse</a>
             @else
-                <a href="{{ route('profile') }}" class="block py-2 hover:text-yellow-300">Mi Cuenta</a>
+                <a href="{{ route('profile.edit') }}" class="block py-2 hover:text-yellow-300">Mi Cuenta</a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="w-full text-left py-2 hover:text-yellow-300">Cerrar Sesión</button>

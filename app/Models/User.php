@@ -37,4 +37,9 @@ class User extends Authenticatable
         // Forzamos a bool, incluso si el atributo es null:
         return (bool) $this->is_admin;
     }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
 }

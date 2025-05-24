@@ -85,6 +85,8 @@ class CheckoutController extends Controller
         $fileName = "boletas/boleta-{$order->id}.pdf";
         Storage::disk('public')->put($fileName, $pdf->output());
 
+        $order->user_id = auth()->id();
+
         // Redirigir a Mercado Pago
         try {
             $initPoint = $mp->createPreference($order);
