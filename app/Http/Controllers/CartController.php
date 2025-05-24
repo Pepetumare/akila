@@ -116,12 +116,23 @@ class CartController extends Controller
         ]));
     }
 
+    private function formatearIngredientes(array $ids): array
+    {
+        $conteo = array_count_values($ids);
+
+        return collect($conteo)->map(function ($cantidad, $id) {
+            $nombre = optional(Ingrediente::find($id))->nombre ?? 'Desconocido';
+            return ($cantidad > 1 ? "{$cantidad}x " : '') . $nombre;
+        })->values()->toArray();
+    }
+
+
     private function buildDescription(array $data): array
     {
         return [
             'Base'         => optional(Ingrediente::find($data['base_id'] ?? null))->nombre ?? 'Sin base',
-            'Proteínas'    => Ingrediente::findMany($data['Proteínas'] ?? [])->pluck('nombre'),
-            'Vegetales'    => Ingrediente::findMany($data['vegetales'] ?? [])->pluck('nombre'),
+            'Proteínas'    => $this->formatearIngredientes($data['Proteínas'] ?? []),
+            'Vegetales'    => $this->formatearIngredientes($data['vegetales'] ?? []),
             'Sin queso'    => !empty($data['cream_cheese']),
             'Sin cebollín' => !empty($data['scallions']),
         ];

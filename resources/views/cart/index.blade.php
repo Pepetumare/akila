@@ -42,13 +42,13 @@
                                 // Agrupamos Proteínas y Vegetales
                                 $proteCounts = collect($d['Proteínas'] ?? [])
                                     ->countBy()
-                                    ->map(fn($qty, $name) => "{$qty} Rolls de {$name}")
+                                    ->map(fn($qty, $name) => "{$qty} {$name}")
                                     ->values()
                                     ->all();
 
                                 $vegCounts = collect($d['Vegetales'] ?? [])
                                     ->countBy()
-                                    ->map(fn($qty, $name) => "{$qty} Rolls de {$name}")
+                                    ->map(fn($qty, $name) => "{$qty} {$name}")
                                     ->values()
                                     ->all();
                             @endphp
