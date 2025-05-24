@@ -13,7 +13,8 @@
         </div>
 
         {{-- ===== Navbar categorías ===== --}}
-        <nav id="catBar" class="hidden md:block bg-white shadow rounded p-4 mb-4">
+        <nav id="catBar" class="hidden md:block bg-white shadow rounded p-4 mb-4 transition-all duration-300">
+
             <ul class="flex md:flex-row flex-col gap-2 overflow-auto">
                 <li>
                     <a href="{{ route('menu') }}"
@@ -352,5 +353,21 @@
             document.getElementById(`price-${prodId}`).textContent =
                 `$${(st.basePrice + st.adjust*1000).toLocaleString('de-DE')} CLP`;
         }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleButton = document.getElementById('toggleMenu');
+            const catBar = document.getElementById('catBar');
+            const openTxt = document.getElementById('openTxt');
+            const closeTxt = document.getElementById('closeTxt');
+
+            if (toggleButton && catBar) {
+                toggleButton.addEventListener('click', function() {
+                    catBar.classList.toggle('hidden');
+                    openTxt.classList.toggle('hidden');
+                    closeTxt.classList.toggle('hidden');
+                });
+            }
+        });
     </script>
 @endpush
