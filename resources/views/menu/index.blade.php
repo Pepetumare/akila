@@ -13,25 +13,26 @@
         </div>
 
         {{-- ===== Navbar categorías ===== --}}
-        <nav id="catBar" class="hidden md:block bg-white shadow rounded p-4 mb-4 transition-all duration-300">
-
-            <ul class="flex md:flex-row flex-col gap-2 overflow-auto">
-                <li>
+        <nav id="catBar" class="hidden md:block bg-white shadow rounded p-4 mb-6 transition-all duration-300">
+            <ul
+                class="flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-red-400 px-1 pb-2">
+                <li class="flex-shrink-0">
                     <a href="{{ route('menu') }}"
-                        class="block px-3 py-2 rounded text-sm font-medium {{ request('filter') ? 'bg-gray-100 text-gray-800 hover:bg-red-100' : 'bg-red-600 text-white' }}">
+                        class="block max-w-[180px] truncate px-3 py-2 rounded text-sm font-medium whitespace-nowrap {{ request('filter') ? 'bg-gray-100 text-gray-800 hover:bg-red-100' : 'bg-red-600 text-white' }}">
                         Todas las categorías
                     </a>
                 </li>
                 @foreach ($categorias as $categoria)
-                    <li>
+                    <li class="flex-shrink-0">
                         <a href="{{ route('menu', ['filter' => $categoria->slug]) }}"
-                            class="block px-3 py-2 rounded text-sm font-medium {{ request('filter') == $categoria->slug ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-red-100' }}">
+                            class="block max-w-[180px] truncate px-3 py-2 rounded text-sm font-medium whitespace-nowrap {{ request('filter') == $categoria->slug ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-red-100' }}">
                             {{ $categoria->nombre }}
                         </a>
                     </li>
                 @endforeach
             </ul>
         </nav>
+
 
         {{-- ===== Grid productos ===== --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

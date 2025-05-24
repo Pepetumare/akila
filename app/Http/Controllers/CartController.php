@@ -5,13 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use App\Models\Ingrediente;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class CartController extends Controller
 {
-    /* ========================
-     * 1. Mostrar carrito
-     * ======================*/
     public function index()
     {
         $cart  = session('cart', []);
@@ -20,15 +16,12 @@ class CartController extends Controller
         return view('cart.index', compact('cart', 'total'));
     }
 
-    /* ========================
-     * 2. Añadir / combinar
-     * ======================*/
     public function add(Request $request)
     {
         $data = $request->validate([
             'product_id'       => 'required|exists:productos,id',
             'unidades'         => 'required|integer|min:1',
-            'base_id'          => 'required|exists:ingredientes,id',
+            'base_id'          => 'nullable|exists:ingredientes,id',
             'Proteínas'        => 'nullable|array',
             'Proteínas.*'      => 'exists:ingredientes,id',
             'vegetales'        => 'nullable|array',
@@ -38,20 +31,25 @@ class CartController extends Controller
             'price_adjustment' => 'nullable|integer|min:0',
         ]);
 
-        /* ==== Construir item ==== */
-        $producto         = Producto::findOrFail($data['product_id']);
-        $priceUnit        = $producto->precio + ($data['price_adjustment'] ?? 0);
-        $descripcion      = $this->buildDescription($data);
-        $hash             = $this->makeHash($data + ['product_id'=>$producto->id]);
+        $producto    = Producto::findOrFail($data['product_id']);
+        $priceUnit   = $producto->precio + ($data['price_adjustment'] ?? 0);
+        $descripcion = $this->buildDescription($data);
+        $hash        = $this->makeHash([
+            'product_id'       => $data['product_id'],
+            'base_id'          => $data['base_id'] ?? 0,
+            'Proteinas'        => $data['Proteínas'] ?? [],
+            'vegetales'        => $data['vegetales'] ?? [],
+            'cream_cheese'     => $data['cream_cheese'] ?? false,
+            'scallions'        => $data['scallions'] ?? false,
+            'price_adjustment' => $data['price_adjustment'] ?? 0,
+        ]);
 
         $cart = session('cart', []);
 
         if (isset($cart[$hash])) {
-            // mismo combo → sólo sumamos unidades
             $cart[$hash]['unidades'] += $data['unidades'];
             $cart[$hash]['total']     = $cart[$hash]['unidades'] * $priceUnit;
         } else {
-            // nuevo ítem
             $cart[$hash] = [
                 'hash'        => $hash,
                 'producto_id' => $producto->id,
@@ -65,15 +63,9 @@ class CartController extends Controller
 
         session(['cart' => $cart]);
 
-        // al final del método add()
-return redirect()->route('cart.index')
-                 ->with('success', 'Producto agregado al carrito');
-
+        return redirect()->route('cart.index')->with('success', 'Producto agregado al carrito.');
     }
 
-    /* ========================
-     * 3. Cambiar unidades
-     * ======================*/
     public function update(Request $request)
     {
         $request->validate([
@@ -82,22 +74,18 @@ return redirect()->route('cart.index')
         ]);
 
         $cart = session('cart', []);
-        if (! isset($cart[$request->hash])) {
+        if (!isset($cart[$request->hash])) {
             return back()->withErrors('Ítem no encontrado');
         }
 
         $cart[$request->hash]['unidades'] = $request->unidades;
-        $cart[$request->hash]['total']    =
-            $cart[$request->hash]['unidades'] * $cart[$request->hash]['precio_unit'];
+        $cart[$request->hash]['total']    = $request->unidades * $cart[$request->hash]['precio_unit'];
 
         session(['cart' => $cart]);
 
         return back();
     }
 
-    /* ========================
-     * 4. Eliminar ítem
-     * ======================*/
     public function remove(Request $request)
     {
         $request->validate(['hash' => 'required|string']);
@@ -109,26 +97,18 @@ return redirect()->route('cart.index')
         return back();
     }
 
-    /* ========================
-     * 5. Vaciar carrito
-     * ======================*/
     public function clear()
     {
         session()->forget('cart');
         return back();
     }
 
-    /* =================================================
-     * Helpers
-     * ===============================================*/
-
-    /** Crea un hash determinista basado en la personalización */
     private function makeHash(array $data): string
     {
         return hash('sha256', json_encode([
             $data['product_id'],
-            $data['base_id'],
-            collect($data['Proteínas'] ?? [])->sort()->values(),
+            $data['base_id'] ?? 0,
+            collect($data['Proteinas'] ?? [])->sort()->values(),
             collect($data['vegetales'] ?? [])->sort()->values(),
             $data['cream_cheese'] ?? 0,
             $data['scallions'] ?? 0,
@@ -136,14 +116,13 @@ return redirect()->route('cart.index')
         ]));
     }
 
-    /** Devuelve arreglo descriptivo para la vista */
     private function buildDescription(array $data): array
     {
         return [
-            'Base'      => Ingrediente::find($data['base_id'])->nombre,
-            'Proteínas' => Ingrediente::findMany($data['Proteínas'] ?? [])->pluck('nombre'),
-            'Vegetales' => Ingrediente::findMany($data['vegetales'] ?? [])->pluck('nombre'),
-            'Sin queso' => !empty($data['cream_cheese']),
+            'Base'         => optional(Ingrediente::find($data['base_id'] ?? null))->nombre ?? 'Sin base',
+            'Proteínas'    => Ingrediente::findMany($data['Proteínas'] ?? [])->pluck('nombre'),
+            'Vegetales'    => Ingrediente::findMany($data['vegetales'] ?? [])->pluck('nombre'),
+            'Sin queso'    => !empty($data['cream_cheese']),
             'Sin cebollín' => !empty($data['scallions']),
         ];
     }
