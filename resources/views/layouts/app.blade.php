@@ -117,9 +117,16 @@
                 </div>
             </div>
         </div>
-        <div class="mt-8 text-center text-xs">
+        {{-- <div class="mt-8 text-center text-xs">
             &copy; {{ date('Y') }} Sushi Akila. Todos los derechos reservados.
+        </div> --}}
+        <div class="text-center text-sm text-gray-400 py-4">
+            © {{ date('Y') }} Sushi Akila. Todos los derechos reservados. <span
+                class="sm:inline">
+                <hr> Desarrollado con ❤️ por <a href="https://pcfastmariquina.cl"
+                    class="underline hover:text-red-500">José</a>.</span>
         </div>
+
     </footer>
 
     {{-- Inyección de scripts adicionales --}}
