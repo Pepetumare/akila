@@ -39,11 +39,32 @@ class Producto extends Model
         parent::boot();
 
         static::creating(function ($p) {
-            $p->slug = Str::slug($p->nombre);
+            $slug = Str::slug($p->nombre);
+            $original = $slug;
+            $i = 1;
+
+            while (Producto::where('slug', $slug)->exists()) {
+                $slug = $original . '-' . $i++;
+            }
+
+            $p->slug = $slug;
         });
 
         static::updating(function ($p) {
-            $p->slug = Str::slug($p->nombre);
+            // Si el nombre no ha cambiado, no regeneres el slug
+            if (!$p->isDirty('nombre')) {
+                return;
+            }
+
+            $slug = Str::slug($p->nombre);
+            $original = $slug;
+            $i = 1;
+
+            while (Producto::where('slug', $slug)->where('id', '!=', $p->id)->exists()) {
+                $slug = $original . '-' . $i++;
+            }
+
+            $p->slug = $slug;
         });
     }
 
@@ -53,16 +74,13 @@ class Producto extends Model
         return $this->belongsTo(Categoria::class);
     }
 
-    public function envolturas()
-    {
-
-    }
+    public function envolturas() {}
 
     // Relación muchos a muchos con Ingredientes (con cantidad_permitida)
     public function ingredientes()
     {
         return $this->belongsToMany(Ingrediente::class)
-                ->withPivot('cantidad_permitida');
+            ->withPivot('cantidad_permitida');
     }
 
     // Relación “swappables” (opcionalmente podrías incluir pivot/timestamps)

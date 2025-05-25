@@ -165,6 +165,7 @@ class ProductoController extends Controller
             $data['imagen'] = $path;
         }
 
+        
         return redirect()
             ->route('admin.productos.index')
             ->with('success', 'Producto creado correctamente.');
