@@ -181,22 +181,28 @@
 
                         {{-- hidden inputs inyectados por JS --}}
 
-                        {{-- ==== Selector de Bases ==== --}}
+                        {{-- envolturas --}}
+                        
+                        @php
+                            $envolturasDisponibles = $producto->ingredientes->where('tipo', 'envoltura');
+                        @endphp
+
                         <div>
-                            <h6 class="font-semibold mb-2">Elige una Base</h6>
+                            <h6 class="font-semibold mb-2">Elige una Envoltura</h6>
                             <div class="flex flex-wrap gap-2">
-                                @foreach ($wrappers as $w)
+                                @foreach ($envolturasDisponibles as $env)
                                     <label class="cursor-pointer">
-                                        <input type="radio" name="base_id" value="{{ $w->id }}" required
+                                        <input type="radio" name="envoltura_id" value="{{ $env->id }}" required
                                             class="sr-only peer">
                                         <span
                                             class="px-3 py-1 rounded-full border border-red-600 text-red-600 text-sm transition peer-checked:bg-red-600 peer-checked:text-white">
-                                            {{ $w->nombre }}
+                                            {{ $env->nombre }}
                                         </span>
                                     </label>
                                 @endforeach
                             </div>
                         </div>
+
 
                         {{-- ==== Sin queso / Sin cebollín ==== --}}
                         <div class="flex flex-col gap-2">
