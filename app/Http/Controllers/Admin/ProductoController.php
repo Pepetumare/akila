@@ -151,6 +151,20 @@ class ProductoController extends Controller
         }
         $producto->ingredientes()->sync($sync);
 
+        if ($request->hasFile('imagen')) {
+            $file = $request->file('imagen');
+
+            // 👇 Depurar antes de guardar
+            logger('Nombre original: ' . $file->getClientOriginalName());
+            logger('Extensión: ' . $file->getClientOriginalExtension());
+
+            $path = $file->store('productos', 'public');
+
+            logger('Guardado en: ' . $path);
+
+            $data['imagen'] = $path;
+        }
+
         return redirect()
             ->route('admin.productos.index')
             ->with('success', 'Producto creado correctamente.');
