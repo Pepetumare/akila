@@ -38,7 +38,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             @foreach ($productos as $producto)
                 <div class="bg-white rounded-lg shadow hover:shadow-lg transition flex flex-col">
-                    <img src="{{ $producto->imagen ? asset('storage/' . $producto->imagen) : asset('img/no_disponible.png') }}"
+                    <img src="{{ $producto->imagen ? asset('storage/productos' . $producto->imagen) : asset('img/no_disponible.png') }}"
                         class="h-48 w-full object-cover" alt="{{ $producto->nombre }}">
 
                     <div class="p-4 flex-grow flex flex-col">
