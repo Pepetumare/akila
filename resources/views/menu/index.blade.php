@@ -3,8 +3,8 @@
 @section('content')
     <div class="container py-4 mx-auto">
 
-        {{-- ===== Botón hamburguesa (móvil) ===== --}}
-        <div class="flex justify-between items-center mb-3 md:hidden">
+        {{-- ===== Botón hamburguesa (todas las pantallas) ===== --}}
+        <div class="flex justify-between items-center mb-3">
             <h2 class="text-lg font-bold">Categorías</h2>
             <button id="toggleMenu" class="p-2 rounded bg-red-600 text-white">
                 <span id="openTxt">☰ Categorías</span>
@@ -12,26 +12,33 @@
             </button>
         </div>
 
-        {{-- ===== Navbar categorías ===== --}}
-        <nav id="catBar" class="hidden md:block bg-white shadow rounded p-4 mb-6 transition-all duration-300">
-            <ul
-                class="flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-red-400 px-1 pb-2">
-                <li class="flex-shrink-0">
+        {{-- ===== Navbar categorías (bloque centrado, estilo profesional) ===== --}}
+        <nav id="catBar"
+            class="hidden bg-white shadow-lg rounded-2xl p-6 mb-6 max-w-lg mx-auto transition-all duration-300">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 text-center">Filtra tu búsqueda</h3>
+            <ul class="space-y-4">
+                <li>
                     <a href="{{ route('menu') }}"
-                        class="block max-w-[180px] truncate px-3 py-2 rounded text-sm font-medium whitespace-nowrap {{ request('filter') ? 'bg-gray-100 text-gray-800 hover:bg-red-100' : 'bg-red-600 text-white' }}">
+                        class="flex items-center justify-center px-5 py-3 bg-red-50 border border-transparent 
+                      rounded-lg text-base font-medium text-red-600 hover:bg-red-100 hover:shadow 
+                      transition shadow-sm">
                         Todas las categorías
                     </a>
                 </li>
                 @foreach ($categorias as $categoria)
-                    <li class="flex-shrink-0">
+                    <li>
                         <a href="{{ route('menu', ['filter' => $categoria->slug]) }}"
-                            class="block max-w-[180px] truncate px-3 py-2 rounded text-sm font-medium whitespace-nowrap {{ request('filter') == $categoria->slug ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-red-100' }}">
+                            class="flex items-center justify-center px-5 py-3 bg-white border border-gray-200 
+                          rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-red-200 
+                          hover:text-red-600 hover:shadow transition-shadow duration-200">
                             {{ $categoria->nombre }}
                         </a>
                     </li>
                 @endforeach
             </ul>
         </nav>
+
+
 
 
         {{-- ===== Grid productos ===== --}}
@@ -182,7 +189,7 @@
                         {{-- hidden inputs inyectados por JS --}}
 
                         {{-- envolturas --}}
-                        
+
                         @php
                             $envolturasDisponibles = $producto->ingredientes->where('tipo', 'envoltura');
                         @endphp
@@ -363,19 +370,27 @@
         }
     </script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', () => {
             const toggleButton = document.getElementById('toggleMenu');
             const catBar = document.getElementById('catBar');
             const openTxt = document.getElementById('openTxt');
             const closeTxt = document.getElementById('closeTxt');
 
-            if (toggleButton && catBar) {
-                toggleButton.addEventListener('click', function() {
-                    catBar.classList.toggle('hidden');
-                    openTxt.classList.toggle('hidden');
-                    closeTxt.classList.toggle('hidden');
+            // Toggle del menú
+            toggleButton.addEventListener('click', () => {
+                catBar.classList.toggle('hidden');
+                openTxt.classList.toggle('hidden');
+                closeTxt.classList.toggle('hidden');
+            });
+
+            // Al hacer click en cualquier categoría, ocultar el menú
+            catBar.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    catBar.classList.add('hidden');
+                    openTxt.classList.remove('hidden');
+                    closeTxt.classList.add('hidden');
                 });
-            }
+            });
         });
     </script>
 @endpush
