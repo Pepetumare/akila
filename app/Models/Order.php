@@ -18,6 +18,7 @@ class Order extends Model
         'delivery_cost',
         'total',
         'status',
+        'mp_payment_id',
     ];
 
     protected $casts = [
