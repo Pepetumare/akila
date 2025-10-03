@@ -19,9 +19,11 @@ class MercadoPagoService
 
         // 2) Para pruebas locales, desactiva la verificación SSL
         //    (usa HTTP interno o skip de SSL)
-        MercadoPagoConfig::setRuntimeEnviroment(
-            MercadoPagoConfig::LOCAL
-        );  // :contentReference[oaicite:0]{index=0}
+        if (app()->environment('local')) {
+            MercadoPagoConfig::setRuntimeEnvironment(
+                MercadoPagoConfig::LOCAL
+            );  // :contentReference[oaicite:0]{index=0}
+        }
 
         // 3) Instancia el client
         $this->client = new PreferenceClient();
