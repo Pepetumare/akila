@@ -32,9 +32,23 @@ class MercadoPagoService
      */
     public function createPreference(Order $order): string
     {
-        // ... tu código para armar $items, back_urls, etc. ...
+        $order->loadMissing('items');
 
-        $preference = $this->client->create([
+        $items = $order->items->map(function ($item) {
+            return [
+                'id'          => (string) $item->product_id,
+                'title'       => $item->nombre,
+                'quantity'    => (int) $item->unidades,
+                'unit_price'  => (float) $item->precio_unit,
+                'currency_id' => 'CLP',
+            ];
+        })->values()->all();
+
+        if (empty($items)) {
+            throw new \RuntimeException('No se pudieron generar los items para Mercado Pago.');
+        }
+
+        $payload = [
             'items'              => $items,
             'external_reference' => (string) $order->id,
             'payer'              => [
@@ -48,7 +62,23 @@ class MercadoPagoService
             ],
             'auto_return'      => 'approved',
             'notification_url' => route('checkout.webhook'),
-        ]);
+            'statement_descriptor' => 'Sushi Akila',
+        ];
+
+        if ($order->metodo_entrega === 'delivery') {
+            $payload['shipments'] = [
+                'receiver_address' => array_filter([
+                    'street_name' => $order->cliente_direccion,
+                    'zip_code'    => '0',
+                    'city_name'   => 'San José',
+                    'state_name'  => 'Costa Rica',
+                ], fn ($value) => !is_null($value) && $value !== ''),
+                'cost' => (float) $order->delivery_cost,
+                'mode' => 'not_specified',
+            ];
+        }
+
+        $preference = $this->client->create($payload);
 
         return app()->environment('production')
             ? $preference->init_point

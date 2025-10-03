@@ -65,6 +65,22 @@
                 <td><strong>Cliente:</strong> {{ $order->cliente_nombre }}</td>
                 <td><strong>Teléfono:</strong> {{ $order->cliente_telefono }}</td>
             </tr>
+            <tr>
+                <td><strong>Método:</strong>
+                    {{ $order->metodo_entrega === 'delivery' ? 'Delivery' : 'Retiro en tienda' }}</td>
+                <td><strong>Zona:</strong>
+                    @if ($order->metodo_entrega === 'delivery')
+                        {{ $order->zona_delivery === 'fuera' ? 'Fuera de San José' : 'Dentro de San José' }}
+                    @else
+                        —
+                    @endif
+                </td>
+            </tr>
+            @if ($order->metodo_entrega === 'delivery' && $order->kms_fuera)
+                <tr>
+                    <td colspan="2"><strong>Kms extra:</strong> {{ $order->kms_fuera }} km</td>
+                </tr>
+            @endif
             @if ($order->cliente_direccion)
                 <tr>
                     <td colspan="2"><strong>Dirección:</strong> {{ $order->cliente_direccion }}</td>
@@ -92,26 +108,26 @@
         </thead>
         <tbody>
             @foreach ($order->items as $item)
-                @php($d = json_decode($item->detalle, true))
+                @php($d = collect($item->detalle ?? []))
                 <tr>
                     <td>{{ $item->nombre }}</td>
                     <td class="right">{{ $item->unidades }}</td>
-                    <td class="right">${{ number_format($item->precio_unit, 0, ',', '.') }}</td>
+                    <td class="right">${{ number_format($item->precio_unit, 2, ',', '.') }}</td>
                     <td>
-                        <div class="small"><strong>Base:</strong> {{ $d['Base'] ?? '—' }}</div>
+                        <div class="small"><strong>Base:</strong> {{ $d->get('Base', '—') }}</div>
                         <div class="small"><strong>Proteínas:</strong>
-                            {{ collect($d['Proteínas'] ?? [])->join(', ') ?: '—' }}</div>
+                            {{ collect($d->get('Proteínas', []))->join(', ') ?: '—' }}</div>
                         <div class="small"><strong>Vegetales:</strong>
-                            {{ collect($d['Vegetales'] ?? [])->join(', ') ?: '—' }}</div>
-                        @if ($d['Sin queso'] ?? false)
+                            {{ collect($d->get('Vegetales', []))->join(', ') ?: '—' }}</div>
+                        @if ($d->get('Sin queso'))
                             <div class="small">Sin queso crema</div>
                         @endif
-                        @if ($d['Sin cebollín'] ?? false)
+                        @if ($d->get('Sin cebollín'))
                             <div class="small">Sin cebollín</div>
                         @endif
                     </td>
                     <td class="right font-bold">
-                        ${{ number_format($item->total, 0, ',', '.') }}
+                        ${{ number_format($item->total, 2, ',', '.') }}
                     </td>
                 </tr>
             @endforeach
@@ -123,17 +139,17 @@
         <tbody>
             <tr>
                 <td><strong>Subtotal:</strong></td>
-                <td class="right">${{ number_format($order->subtotal, 0, ',', '.') }}</td>
+                <td class="right">${{ number_format($order->subtotal, 2, ',', '.') }}</td>
             </tr>
             @if (($order->envio ?? 0) > 0)
                 <tr>
                     <td><strong>Envío:</strong></td>
-                    <td class="right">${{ number_format($order->envio, 0, ',', '.') }}</td>
+                    <td class="right">${{ number_format($order->envio, 2, ',', '.') }}</td>
                 </tr>
             @endif
             <tr>
                 <td><strong>Total:</strong></td>
-                <td class="right">${{ number_format($order->total, 0, ',', '.') }}</td>
+                <td class="right">${{ number_format($order->total, 2, ',', '.') }}</td>
             </tr>
         </tbody>
     </table>

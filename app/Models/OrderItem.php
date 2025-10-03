@@ -19,6 +19,9 @@ class OrderItem extends Model
     protected $casts = [
         'removed_bases' => 'array',
         'extras'        => 'array',
+        'detalle'       => 'array',
+        'precio_unit'   => 'decimal:2',
+        'total'         => 'decimal:2',
     ];
 
     public function producto()
