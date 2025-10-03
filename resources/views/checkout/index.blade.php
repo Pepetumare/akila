@@ -8,8 +8,8 @@
         $subtotal = collect($cart)->sum('total');
     @endphp
 
-    <div class="container mx-auto p-6 max-w-lg">
-        <h2 class="text-2xl font-bold mb-4">Finalizar Compra</h2>
+    <div class="container mx-auto p-6 max-w-3xl">
+        <h2 class="text-3xl font-bold mb-6 text-center">Finaliza tu pedido</h2>
 
         {{-- Errores --}}
         @if ($errors->any())
@@ -23,118 +23,130 @@
         @endif
 
         {{-- Resumen carrito --}}
-        <div class="mb-6">
-            <h3 class="font-semibold mb-2">Tu pedido</h3>
+        <div class="mb-8 grid gap-4 lg:grid-cols-2">
+            <div class="bg-white shadow rounded-lg p-5 border border-slate-100">
+                <h3 class="font-semibold text-lg mb-3">Tu pedido</h3>
 
-            @foreach ($cart as $item)
-                @php
-                    $d = $item['detalle'];
-                    $itemSubtotal = $item['precio_unit'] * $item['unidades'];
+                @foreach ($cart as $item)
+                    @php
+                        $d = $item['detalle'];
+                        $itemSubtotal = $item['precio_unit'] * $item['unidades'];
 
-                    // Agrupar proteínas
-                    $proteCounts = collect($d['Proteínas'] ?? [])
-                        ->countBy()
-                        ->map(fn($qty, $name) => "{$qty} de {$name}")
-                        ->values()
-                        ->all();
+                        // Agrupar proteínas
+                        $proteCounts = collect($d['Proteínas'] ?? [])
+                            ->countBy()
+                            ->map(fn ($qty, $name) => "{$qty} de {$name}")
+                            ->values()
+                            ->all();
 
-                    // Agrupar vegetales
-                    $vegCounts = collect($d['Vegetales'] ?? [])
-                        ->countBy()
-                        ->map(fn($qty, $name) => "{$qty} de {$name}")
-                        ->values()
-                        ->all();
-                @endphp
+                        // Agrupar vegetales
+                        $vegCounts = collect($d['Vegetales'] ?? [])
+                            ->countBy()
+                            ->map(fn ($qty, $name) => "{$qty} de {$name}")
+                            ->values()
+                            ->all();
+                    @endphp
 
-                <div class="border rounded p-3 mb-3">
-                    <p class="font-semibold">
-                        {{ $item['nombre'] }}
-                        <span class="text-gray-500">×{{ $item['unidades'] }}</span>
-                    </p>
+                    <div class="border rounded p-3 mb-3 bg-slate-50">
+                        <p class="font-semibold">
+                            {{ $item['nombre'] }}
+                            <span class="text-gray-500">×{{ $item['unidades'] }}</span>
+                        </p>
 
-                    <ul class="text-xs text-gray-700 space-y-1 mt-1">
-                        <li>
-                            <strong>Base:</strong>
-                            {{ $d['Base'] ?? '—' }}
-                        </li>
-                        <li>
-                            <strong>Proteínas:</strong>
-                            {{ $proteCounts ? implode(', ', $proteCounts) : '—' }}
-                        </li>
-                        <li>
-                            <strong>Vegetales:</strong>
-                            {{ $vegCounts ? implode(', ', $vegCounts) : '—' }}
-                        </li>
-                        @if ($d['Sin queso'] ?? false)
-                            <li class="text-amber-700">Sin queso crema</li>
-                        @endif
-                        @if ($d['Sin cebollín'] ?? false)
-                            <li class="text-amber-700">Sin cebollín</li>
-                        @endif
-                    </ul>
+                        <ul class="text-xs text-gray-700 space-y-1 mt-1">
+                            <li>
+                                <strong>Base:</strong>
+                                {{ $d['Base'] ?? '—' }}
+                            </li>
+                            <li>
+                                <strong>Proteínas:</strong>
+                                {{ $proteCounts ? implode(', ', $proteCounts) : '—' }}
+                            </li>
+                            <li>
+                                <strong>Vegetales:</strong>
+                                {{ $vegCounts ? implode(', ', $vegCounts) : '—' }}
+                            </li>
+                            @if ($d['Sin queso'] ?? false)
+                                <li class="text-amber-700">Sin queso crema</li>
+                            @endif
+                            @if ($d['Sin cebollín'] ?? false)
+                                <li class="text-amber-700">Sin cebollín</li>
+                            @endif
+                        </ul>
 
-                    <p class="text-sm text-gray-600 mt-1">
-                        Subtotal: ${{ number_format($itemSubtotal, 0, ',', '.') }}
-                    </p>
-                </div>
-            @endforeach
-        </div>
+                        <p class="text-sm text-gray-600 mt-1">
+                            Subtotal: ${{ number_format($itemSubtotal, 2, ',', '.') }}
+                        </p>
+                    </div>
+                @endforeach
+            </div>
 
-        {{-- === FORM === --}}
-        <form id="checkoutForm" action="{{ route('checkout.store') }}" method="POST" class="space-y-6">
-            @csrf
+            {{-- === FORM === --}}
+            <form id="checkoutForm" action="{{ route('checkout.store') }}" method="POST"
+                class="space-y-6 bg-white shadow rounded-lg p-5 border border-slate-100">
+                @csrf
 
             {{-- Opciones de entrega --}}
             <div>
                 <h3 class="font-semibold mb-2">Método de entrega</h3>
 
-                <label class="inline-flex items-center gap-2 mb-2">
-                    <input type="radio" name="metodo_entrega" value="pickup" class="form-radio" checked
-                        onclick="updateDelivery()">
-                    Retiro en tienda (sin costo)
-                </label><br>
+                <div class="flex flex-col gap-2">
+                    <label class="inline-flex items-center gap-2">
+                        <input type="radio" name="metodo_entrega" value="pickup" class="text-green-600"
+                            checked onclick="updateDelivery()">
+                        <span>
+                            <span class="font-medium">Retiro en tienda</span>
+                            <span class="block text-xs text-gray-500">Sin costo adicional</span>
+                        </span>
+                    </label>
 
-                <label class="inline-flex items-center gap-2">
-                    <input type="radio" name="metodo_entrega" value="delivery" class="form-radio"
-                        onclick="updateDelivery()">
-                    Delivery
-                </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="radio" name="metodo_entrega" value="delivery" class="text-green-600"
+                            onclick="updateDelivery()">
+                        <span>
+                            <span class="font-medium">Delivery a domicilio</span>
+                            <span class="block text-xs text-gray-500">Base $2.500 + $500 por km fuera de San José</span>
+                        </span>
+                    </label>
+                </div>
 
                 {{-- Opciones de delivery --}}
-                <div id="deliveryOptions" class="mt-4 ml-6 hidden space-y-3">
+                <div id="deliveryOptions" class="mt-4 ml-1 hidden space-y-3">
+                    <p class="text-sm text-gray-600">Selecciona tu zona:</p>
                     <label class="inline-flex items-center gap-2">
-                        <input type="radio" name="zona_delivery" value="dentro" class="form-radio"
+                        <input type="radio" name="zona_delivery" value="dentro" class="text-green-600"
                             onclick="updateDelivery()">
                         Dentro de San José (+$2.500)
-                    </label><br>
+                    </label>
 
                     <label class="inline-flex items-center gap-2">
-                        <input type="radio" name="zona_delivery" value="fuera" class="form-radio"
+                        <input type="radio" name="zona_delivery" value="fuera" class="text-green-600"
                             onclick="updateDelivery()">
                         Fuera de San José
                     </label>
 
                     {{-- Km input --}}
                     <div id="kmBox" class="mt-2 ml-6 hidden">
-                        <label for="kms_fuera" class="text-sm">Kms aproximados desde San José:</label>
-                        <input type="number" name="kms_fuera" id="kms_fuera" min="1" value="1"
-                            class="border p-1 w-20 ml-2" oninput="updateDelivery()">
-                        <p class="text-xs text-gray-500 mt-1">Recargo: $2.500 + $500 por km</p>
+                        <label for="kms_fuera" class="text-sm font-medium">Kms aproximados desde San José</label>
+                        <div class="flex items-center gap-3 mt-1">
+                            <input type="number" name="kms_fuera" id="kms_fuera" min="1" value="1"
+                                class="border p-1 w-24 rounded" oninput="updateDelivery()">
+                            <span class="text-xs text-gray-500">Recargo: $2.500 + $500 por km</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {{-- Totales dinámicos --}}
-            <div class="border-t pt-4">
-                <p class="text-right font-semibold">
-                    Subtotal: ${{ number_format($subtotal, 0, ',', '.') }}
+            <div class="border-t pt-4 space-y-1 text-right bg-slate-50 rounded p-4">
+                <p class="font-semibold text-slate-600">
+                    Subtotal: <span id="subtotalAmount">${{ number_format($subtotal, 2, ',', '.') }}</span>
                 </p>
-                <p id="deliveryLine" class="text-right font-semibold hidden">
-                    Delivery: $<span id="deliveryCost">0</span>
+                <p id="deliveryLine" class="font-semibold text-slate-600 hidden">
+                    Delivery: <span id="deliveryCost">$0</span>
                 </p>
-                <p class="text-right text-lg font-bold">
-                    Total a pagar: $
-                    <span id="totalPay">{{ number_format($subtotal, 0, ',', '.') }}</span>
+                <p class="text-xl font-bold text-slate-900">
+                    Total a pagar: <span id="totalPay">${{ number_format($subtotal, 2, ',', '.') }}</span>
                 </p>
             </div>
 
@@ -152,11 +164,12 @@
                         value="{{ old('cliente_telefono') }}" class="border p-2 w-full" required>
                 </div>
 
-                <div>
+                <div id="addressGroup" class="hidden">
                     <label for="cliente_direccion" class="block font-medium">Dirección de entrega:</label>
                     <input type="text" id="cliente_direccion" name="cliente_direccion"
                         value="{{ old('cliente_direccion') }}" placeholder="Calle, número, referencia…"
-                        class="border p-2 w-full" required>
+                        class="border p-2 w-full">
+                    <p class="text-xs text-gray-500 mt-1">Solo solicitamos dirección cuando seleccionas delivery.</p>
                 </div>
 
                 <div>
@@ -165,13 +178,11 @@
                 </div>
             </div>
 
-            {{-- Hidden delivery cost para backend --}}
-            <input type="hidden" name="delivery_cost" id="delivery_cost" value="0">
-
             <button type="submit" class="w-full bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
                 Confirmar Pedido
             </button>
         </form>
+        </div>
     </div>
 
     @push('scripts')
@@ -188,7 +199,8 @@
             const deliveryLine = document.getElementById('deliveryLine');
             const deliveryCostEl = document.getElementById('deliveryCost');
             const totalPayEl = document.getElementById('totalPay');
-            const hiddenCost = document.getElementById('delivery_cost');
+            const addressGroup = document.getElementById('addressGroup');
+            const addressInput = document.getElementById('cliente_direccion');
 
             function updateDelivery() {
                 const metodo = document.querySelector('input[name="metodo_entrega"]:checked').value;
@@ -196,6 +208,9 @@
 
                 if (metodo === 'delivery') {
                     deliveryOptions.classList.remove('hidden');
+                    addressGroup.classList.remove('hidden');
+                    addressInput.removeAttribute('disabled');
+                    addressInput.setAttribute('required', 'required');
                     const zona = document.querySelector('input[name="zona_delivery"]:checked');
                     if (zona) {
                         if (zona.value === 'dentro') {
@@ -210,12 +225,26 @@
                 } else {
                     deliveryOptions.classList.add('hidden');
                     kmBox.classList.add('hidden');
+                    addressGroup.classList.add('hidden');
+                    addressInput.value = '';
+                    addressInput.setAttribute('disabled', 'disabled');
+                    addressInput.removeAttribute('required');
+                    const selectedZone = document.querySelector('input[name="zona_delivery"]:checked');
+                    if (selectedZone) {
+                        selectedZone.checked = false;
+                    }
                 }
 
                 deliveryLine.classList.toggle('hidden', cost === 0);
-                deliveryCostEl.textContent = cost.toLocaleString('de-DE');
-                totalPayEl.textContent = (SUBTOTAL + cost).toLocaleString('de-DE');
-                hiddenCost.value = cost;
+                deliveryCostEl.textContent = formatCurrency(cost);
+                totalPayEl.textContent = formatCurrency(SUBTOTAL + cost);
+            }
+
+            function formatCurrency(value) {
+                return `$${Number(value).toLocaleString('es-CL', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}`;
             }
 
             // Inicializa

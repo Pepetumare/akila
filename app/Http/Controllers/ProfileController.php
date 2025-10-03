@@ -42,10 +42,9 @@ class ProfileController extends Controller
             $user->avatar = $path;
         }
 
-        $user->fill(collect($validated)->except('password')->toArray());
+        $user->fill(collect($validated)->except(['password', 'avatar'])->toArray());
 
-
-        if ($validated['password']) {
+        if (! empty($validated['password'] ?? null)) {
             $user->password = Hash::make($validated['password']);
         }
 

@@ -34,12 +34,11 @@ class CheckoutController extends Controller
         $data = $request->validate([
             'cliente_nombre'      => 'required|string|max:255',
             'cliente_telefono'    => 'required|string|max:20',
-            'cliente_direccion'   => 'required|string|max:255',
+            'cliente_direccion'   => 'nullable|string|max:255|required_if:metodo_entrega,delivery',
             'cliente_comentarios' => 'nullable|string',
             'metodo_entrega'      => 'required|in:pickup,delivery',
-            'zona_delivery'       => 'nullable|in:dentro,fuera',
-            'kms_fuera'           => 'nullable|integer|min:1',
-            'delivery_cost'       => 'required|integer|min:0',
+            'zona_delivery'       => 'nullable|string|in:dentro,fuera|required_if:metodo_entrega,delivery',
+            'kms_fuera'           => 'nullable|integer|min:1|required_if:zona_delivery,fuera',
         ]);
 
         $cart = $request->session()->get('cart', []);
@@ -47,20 +46,31 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index');
         }
 
-        $subtotal     = collect($cart)->sum('total');
-        $deliveryCost = $data['delivery_cost'];
-        $total        = $subtotal + $deliveryCost;
+        $subtotal = collect($cart)->sum(fn ($item) => (float) ($item['total'] ?? 0));
+        $deliveryCost = $this->calculateDeliveryCost(
+            $data['metodo_entrega'],
+            $data['zona_delivery'] ?? null,
+            $data['kms_fuera'] ?? null
+        );
+        $total = $subtotal + $deliveryCost;
 
-        // Transacción para crear Order y OrderItems
-        DB::transaction(function () use ($data, $cart, $subtotal, $deliveryCost, $total, &$order) {
+        $kmsFuera = ($data['zona_delivery'] ?? null) === 'fuera'
+            ? (int) $data['kms_fuera']
+            : null;
+
+        $order = DB::transaction(function () use ($data, $cart, $subtotal, $deliveryCost, $total, $kmsFuera) {
             $order = Order::create([
                 'cliente_nombre'      => $data['cliente_nombre'],
                 'cliente_telefono'    => $data['cliente_telefono'],
-                'cliente_direccion'   => $data['cliente_direccion'],
+                'cliente_direccion'   => $data['metodo_entrega'] === 'delivery'
+                    ? $data['cliente_direccion']
+                    : null,
                 'cliente_comentarios' => $data['cliente_comentarios'] ?? null,
                 'metodo_entrega'      => $data['metodo_entrega'],
-                'zona_delivery'       => $data['zona_delivery'] ?? null,
-                'kms_fuera'           => $data['kms_fuera'] ?? null,
+                'zona_delivery'       => $data['metodo_entrega'] === 'delivery'
+                    ? ($data['zona_delivery'] ?? null)
+                    : null,
+                'kms_fuera'           => $kmsFuera,
                 'subtotal'            => $subtotal,
                 'delivery_cost'       => $deliveryCost,
                 'total'               => $total,
@@ -72,20 +82,29 @@ class CheckoutController extends Controller
                     'product_id'  => $item['producto_id'],
                     'nombre'      => $item['nombre'],
                     'unidades'    => $item['unidades'],
-                    'precio_unit' => $item['precio_unit'],
-                    'total'       => $item['total'],
-                    'detalle'     => json_encode($item['detalle']),
+                    'precio_unit' => (float) $item['precio_unit'],
+                    'total'       => (float) $item['total'],
+                    'detalle'     => $item['detalle'] ?? [],
                 ]);
             }
+
+            if (auth()->check()) {
+                $order->user()->associate(auth()->user());
+                $order->save();
+            }
+
+            return $order->fresh('items');
         });
 
         // Generar y guardar PDF de la boleta
+        $order->loadMissing('items');
+
         $pdf      = Pdf::loadView('pdf.invoice', compact('order'))
             ->setPaper('A4', 'portrait');
         $fileName = "boletas/boleta-{$order->id}.pdf";
         Storage::disk('public')->put($fileName, $pdf->output());
 
-        $order->user_id = auth()->id();
+        $request->session()->forget('cart');
 
         // Redirigir a Mercado Pago
         try {
@@ -95,6 +114,22 @@ class CheckoutController extends Controller
             report($e);
             return back()->withErrors('No pudimos conectar con Mercado Pago. Intenta nuevamente.');
         }
+    }
+
+    private function calculateDeliveryCost(string $method, ?string $zone, $kms): float
+    {
+        if ($method !== 'delivery') {
+            return 0.0;
+        }
+
+        $baseCost = 2500;
+
+        if ($zone === 'fuera') {
+            $distance = max(1, (int) $kms);
+            return $baseCost + ($distance * 500);
+        }
+
+        return $baseCost;
     }
 
     /* =========================================================
