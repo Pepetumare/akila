@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -39,8 +40,9 @@ class CategoriaController extends Controller
         ]);
 
         Categoria::create($data);
+
         return redirect()->route('admin.categorias.index')
-                         ->with('success','Categoría creada.');
+            ->with('success', 'Categoría creada.');
     }
 
     public function edit(Categoria $categoria)
@@ -55,14 +57,19 @@ class CategoriaController extends Controller
         ]);
 
         $categoria->update($data);
+
         return redirect()->route('admin.categorias.index')
-                         ->with('success','Categoría actualizada.');
+            ->with('success', 'Categoría actualizada.');
     }
 
     public function destroy(Categoria $categoria)
     {
+        if ($categoria->productos()->exists()) {
+            return back()->withErrors('La categoría contiene productos. Consérvala y desactívala.');
+        }
         $categoria->delete();
+
         return redirect()->route('admin.categorias.index')
-                         ->with('success','Categoría eliminada.');
+            ->with('success', 'Categoría eliminada.');
     }
 }

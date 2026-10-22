@@ -17,7 +17,7 @@ class User extends Authenticatable
         'address',
         'birthdate',
         'avatar',
-        'is_admin',       // <-- añadir
+        'password',
     ];
 
     protected $hidden = [
@@ -28,9 +28,9 @@ class User extends Authenticatable
     // ← Cambiado de método a propiedad
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password'          => 'hashed',
-        'is_admin'          => 'boolean',  // <-- añadir
-        'birthdate'         => 'date',
+        'password' => 'hashed',
+        'is_admin' => 'boolean',  // <-- añadir
+        'birthdate' => 'date',
     ];
 
     /**

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Categoria;
 use App\Models\Ingrediente;
 use App\Models\Producto;
+use App\Services\MenuConfigurationService;
 use Illuminate\Http\Request;
 
 class ProductoController extends Controller
@@ -39,40 +40,36 @@ class ProductoController extends Controller
         }
 
         // Cargar relaciones
-        $productos = $query->with('ingredientes')->paginate(12)->withQueryString();
+        $productos = $query->with('categoria')->paginate(12)->withQueryString();
 
-        // Cargar categorías e ingredientes para filtros y UI
+        // The modal loads one product on demand; do not hydrate all menu configurations.
         $categorias = Categoria::all();
-        $allIngredients = Ingrediente::orderBy('nombre')->get();
 
-        // Separar ingredientes por tipo para la interfaz de usuario
-        $wrappers = $allIngredients->where('tipo', 'envoltura')->values();
-        $proteins = $allIngredients->where('tipo', 'proteina')->values();
-        $vegetables = $allIngredients->where('tipo', 'vegetal')->values();
-
-        return view('menu.index', compact('productos', 'categorias', 'allIngredients', 'wrappers', 'proteins', 'vegetables'));
+        return view('menu.index', compact('productos', 'categorias'));
     }
 
     // Retorna datos específicos de un producto en formato JSON
     public function show($id)
     {
-        $producto = Producto::with('ingredientes')->findOrFail($id);
+        $producto = Producto::with('ingredientes', 'swappables')->findOrFail($id);
+
         return response()->json($producto);
     }
 
     // Renderiza un modal con detalles del producto y permite personalización
-    public function modal($id)
+    public function modal($id, MenuConfigurationService $menu)
     {
-        $producto = Producto::with('ingredientes')->findOrFail($id);
+        $producto = Producto::with(MenuConfigurationService::RELATIONS)->findOrFail($id);
+        abort_unless($producto->activo && $producto->categoria?->activo, 404);
+        if ($menu->supports($producto)) {
+            $menuConfig = $menu->schema($producto);
 
-        // Calcular número de rolls (bloques de 10 piezas)
-        foreach ($producto->ingredientes as $ing) {
-            $cantidad = $ing->pivot->cantidad_permitida ?? 0;
-            $ing->pivot->rolls = intdiv($cantidad, 10);
+            return response()->view('components.menu-product-modal', compact('producto', 'menuConfig'))->header('Cache-Control', 'no-store');
         }
 
-        $allIngredients = Ingrediente::orderBy('nombre')->get(['id', 'nombre']);
+        $producto->loadMissing('swappables');
+        $allIngredients = Ingrediente::orderBy('nombre')->get(['id', 'nombre', 'tipo']);
 
-        return view('components.modal-producto', compact('producto', 'allIngredients'));
+        return response()->view('components.modal-producto', compact('producto', 'allIngredients'))->header('Cache-Control', 'no-store');
     }
 }

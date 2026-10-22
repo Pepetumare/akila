@@ -17,7 +17,8 @@ test('password can be confirmed', function () {
         'password' => 'password',
     ]);
 
-    $response->assertRedirect();
+    $response->assertRedirect(route('profile.edit', absolute: false));
+    $response->assertSessionHas('auth.password_confirmed_at');
     $response->assertSessionHasNoErrors();
 });
 
@@ -29,4 +30,12 @@ test('password is not confirmed with invalid password', function () {
     ]);
 
     $response->assertSessionHasErrors();
+    $response->assertSessionMissing('auth.password_confirmed_at');
+});
+
+test('password confirmation respects the intended destination', function () {
+    $this->actingAs(User::factory()->create())
+        ->withSession(['url.intended' => route('profile.orders')])
+        ->post('/confirm-password', ['password' => 'password'])
+        ->assertRedirect(route('profile.orders'));
 });

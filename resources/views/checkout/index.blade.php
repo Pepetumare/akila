@@ -1,254 +1,69 @@
 @extends('layouts.app')
-
-@section('title', 'Checkout - Sushi Akila')
-
+@section('title', 'Finaliza tu pedido')
 @section('content')
-    @php
-        $cart = session('cart', []);
-        $subtotal = collect($cart)->sum('total');
-    @endphp
+    <div class="mb-8"><p class="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[var(--akila-red)]">Ya casi está</p><h1 class="mb-3 text-3xl font-black tracking-tight sm:text-4xl">Finaliza tu pedido</h1><p class="mb-0 text-sm leading-6 text-[var(--akila-gray-700)]">Revisa tus datos, elige la entrega y continúa al pago.</p></div>
+    @if($errors->any())
+        <div role="alert" class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p class="mb-2 font-bold">Revisa tu pedido antes de continuar.</p><ul class="mb-0 list-inside list-disc">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+    @endif
 
-    <div class="container mx-auto p-6 max-w-3xl">
-        <h2 class="text-3xl font-bold mb-6 text-center">Finaliza tu pedido</h2>
+    <form id="checkoutForm" action="{{ route('checkout.store') }}" method="POST" class="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
+        x-data="{ method: @js(old('metodo_entrega', 'pickup')), zone: @js(old('zona_delivery', '')) }">
+        @csrf
+        <div class="min-w-0 space-y-6">
+            <section aria-labelledby="checkout-customer-title" class="rounded-2xl border border-[var(--akila-gray-200)] bg-white p-6 sm:p-8">
+                <p class="mb-2 text-xs font-bold tracking-widest text-[var(--akila-red)]">01 · TUS DATOS</p><h2 id="checkout-customer-title" class="mb-6 text-xl font-bold">Datos del cliente</h2>
+                <div class="space-y-5">
+                    <div><label for="cliente_nombre" class="mb-2 block text-sm font-semibold">Nombre completo</label><x-store.form-input id="cliente_nombre" type="text" name="cliente_nombre" :value="old('cliente_nombre')" required autocomplete="name" /><x-input-error :messages="$errors->get('cliente_nombre')" class="mt-2" /></div>
+                    <div><label for="cliente_telefono" class="mb-2 block text-sm font-semibold">Teléfono</label><x-store.form-input id="cliente_telefono" type="tel" name="cliente_telefono" :value="old('cliente_telefono')" required autocomplete="tel" /><x-input-error :messages="$errors->get('cliente_telefono')" class="mt-2" /></div>
+                    <div><label for="cliente_comentarios" class="mb-2 block text-sm font-semibold">Comentarios <span class="font-normal text-[var(--akila-gray-700)]">(opcional)</span></label><textarea id="cliente_comentarios" name="cliente_comentarios" rows="3" class="block w-full rounded-xl border border-[var(--akila-gray-200)] bg-white px-3 py-3 text-base focus:border-red-600 focus:ring-red-600">{{ old('cliente_comentarios') }}</textarea><x-input-error :messages="$errors->get('cliente_comentarios')" class="mt-2" /></div>
+                </div>
+            </section>
 
-        {{-- Errores --}}
-        @if ($errors->any())
-            <div class="mb-4 p-4 bg-red-100 text-red-700 rounded">
-                <ul class="list-disc list-inside">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
+            <section aria-labelledby="checkout-delivery-title" class="rounded-2xl border border-[var(--akila-gray-200)] bg-white p-6 sm:p-8">
+                <p class="mb-2 text-xs font-bold tracking-widest text-[var(--akila-red)]">02 · A TU MANERA</p><h2 id="checkout-delivery-title" class="mb-6 text-xl font-bold">Entrega</h2>
+                <fieldset><legend class="mb-3 text-sm font-semibold">¿Cómo recibirás tu pedido?</legend>
+                    <div class="space-y-3">
+                        <label class="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-[var(--akila-gray-200)] p-4"><input type="radio" name="metodo_entrega" value="pickup" x-model="method" @checked(old('metodo_entrega', 'pickup') === 'pickup') @change="zone = ''; $refs.address.value = ''" class="h-5 w-5 shrink-0 text-red-600 focus:ring-red-600"><span><span class="block text-sm font-bold">Retiro en tienda</span><span class="text-xs text-[var(--akila-gray-700)]">Sin costo adicional</span></span></label>
+                        <label class="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-[var(--akila-gray-200)] p-4"><input type="radio" name="metodo_entrega" value="delivery" x-model="method" @checked(old('metodo_entrega') === 'delivery') class="h-5 w-5 shrink-0 text-red-600 focus:ring-red-600"><span><span class="block text-sm font-bold">Delivery a domicilio</span><span class="text-xs leading-5 text-[var(--akila-gray-700)]">Base $2.500; fuera de San José, $500 adicionales por km.</span></span></label>
+                    </div>
+                </fieldset>
+                <x-input-error :messages="$errors->get('metodo_entrega')" class="mt-2" />
+                <div id="deliveryOptions" x-cloak x-show="method === 'delivery'" class="mt-5 space-y-5">
+                    <fieldset><legend class="mb-2 text-sm font-semibold">Zona de entrega</legend><div class="space-y-1">
+                        <label class="flex min-h-12 cursor-pointer items-center gap-3 text-sm"><input type="radio" name="zona_delivery" value="dentro" x-model="zone" :required="method === 'delivery'" @checked(old('zona_delivery') === 'dentro') class="h-5 w-5 text-red-600 focus:ring-red-600">Dentro de San José (+$2.500)</label>
+                        <label class="flex min-h-12 cursor-pointer items-center gap-3 text-sm"><input type="radio" name="zona_delivery" value="fuera" x-model="zone" :required="method === 'delivery'" @checked(old('zona_delivery') === 'fuera') class="h-5 w-5 text-red-600 focus:ring-red-600">Fuera de San José</label>
+                    </div><x-input-error :messages="$errors->get('zona_delivery')" class="mt-2" /></fieldset>
+                    <div id="kmBox" x-cloak x-show="zone === 'fuera'"><label for="kms_fuera" class="mb-2 block text-sm font-semibold">Kilómetros aproximados desde San José</label><x-store.form-input id="kms_fuera" type="number" name="kms_fuera" min="1" max="100" :value="old('kms_fuera', 1)" class="max-w-32" /><p class="mb-0 mt-2 text-xs text-[var(--akila-gray-700)]">Recargo: $2.500 + $500 por km.</p><x-input-error :messages="$errors->get('kms_fuera')" class="mt-2" /></div>
+                    <div id="addressGroup"><label for="cliente_direccion" class="mb-2 block text-sm font-semibold">Dirección de entrega</label><x-store.form-input x-ref="address" id="cliente_direccion" type="text" name="cliente_direccion" :value="old('cliente_direccion')" placeholder="Calle, número, referencia…" autocomplete="street-address" x-bind:disabled="method !== 'delivery'" x-bind:required="method === 'delivery'" /><x-input-error :messages="$errors->get('cliente_direccion')" class="mt-2" /></div>
+                </div>
+            </section>
+        </div>
+
+        <div class="min-w-0 space-y-6">
+            <section aria-labelledby="checkout-summary-title" class="rounded-2xl border border-[var(--akila-gray-200)] bg-white p-6 sm:p-8">
+                <div class="mb-6"><p class="mb-2 text-xs font-bold tracking-widest text-[var(--akila-red)]">03 · TU SELECCIÓN</p><h2 id="checkout-summary-title" class="mb-0 text-xl font-bold">Resumen del pedido</h2></div>
+                <ul class="m-0 list-none space-y-4 p-0">
+                    @foreach($cart as $item)
+                        @php
+                            $detail = $item['detalle'] ?? [];
+                            $proteinCounts = collect($detail['Proteínas'] ?? [])->countBy()->map(fn ($qty, $name) => "{$qty} de {$name}")->values();
+                            $vegetableCounts = collect($detail['Vegetales'] ?? [])->countBy()->map(fn ($qty, $name) => "{$qty} de {$name}")->values();
+                        @endphp
+                        <li class="min-w-0 border-b border-[var(--akila-gray-200)] pb-4">
+                            <div class="mb-2 flex flex-wrap justify-between gap-2"><h3 class="mb-0 break-words text-sm font-bold">{{ $item['nombre'] }} <span class="font-normal text-[var(--akila-gray-700)]">× {{ $item['unidades'] }}</span></h3><x-store.price :amount="$item['total']" class="text-sm" /></div>
+                            @if(isset($detail['Bloques']))<x-menu-selection-summary :detail="$detail" />@else<ul class="m-0 list-none space-y-1 break-words p-0 text-xs leading-5 text-[var(--akila-gray-700)]"><li><strong>Base:</strong> {{ $detail['Base'] ?? '—' }}</li><li><strong>Proteínas:</strong> {{ $proteinCounts->isNotEmpty() ? $proteinCounts->implode(', ') : '—' }}</li><li><strong>Vegetales:</strong> {{ $vegetableCounts->isNotEmpty() ? $vegetableCounts->implode(', ') : '—' }}</li>@if($detail['Sin queso'] ?? false)<li>Sin queso crema</li>@endif @if($detail['Sin cebollín'] ?? false)<li>Sin cebollín</li>@endif</ul>@endif
+                        </li>
                     @endforeach
                 </ul>
-            </div>
-        @endif
+                <dl class="mb-0 mt-5 space-y-4"><div class="flex flex-wrap justify-between gap-2"><dt class="text-sm font-semibold">Subtotal de productos</dt><dd id="subtotalAmount" class="mb-0"><x-store.price :amount="$subtotal" class="text-lg" /></dd></div><div class="flex flex-wrap justify-between gap-2 text-sm"><dt>Entrega</dt><dd class="mb-0 text-right text-[var(--akila-gray-700)]"><span x-show="method === 'pickup'">Retiro sin costo</span><span x-cloak x-show="method === 'delivery'">Según zona y distancia</span></dd></div></dl>
+                <div class="mt-5 rounded-xl bg-[var(--akila-cream)] p-4 text-sm leading-6"><span x-show="method === 'pickup'">Total con retiro: <x-store.price :amount="$subtotal" /></span><span x-cloak x-show="method === 'delivery'">El total con delivery se determinará al continuar, según la zona y los kilómetros indicados, antes de pagar en Mercado Pago.</span></div>
+                <a href="{{ route('cart.index') }}" class="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--akila-gray-700)] underline underline-offset-4">Volver al carrito</a>
+            </section>
 
-        {{-- Resumen carrito --}}
-        <div class="mb-8 grid gap-4 lg:grid-cols-2">
-            <div class="bg-white shadow rounded-lg p-5 border border-slate-100">
-                <h3 class="font-semibold text-lg mb-3">Tu pedido</h3>
-
-                @foreach ($cart as $item)
-                    @php
-                        $d = $item['detalle'];
-                        $itemSubtotal = $item['precio_unit'] * $item['unidades'];
-
-                        // Agrupar proteínas
-                        $proteCounts = collect($d['Proteínas'] ?? [])
-                            ->countBy()
-                            ->map(fn ($qty, $name) => "{$qty} de {$name}")
-                            ->values()
-                            ->all();
-
-                        // Agrupar vegetales
-                        $vegCounts = collect($d['Vegetales'] ?? [])
-                            ->countBy()
-                            ->map(fn ($qty, $name) => "{$qty} de {$name}")
-                            ->values()
-                            ->all();
-                    @endphp
-
-                    <div class="border rounded p-3 mb-3 bg-slate-50">
-                        <p class="font-semibold">
-                            {{ $item['nombre'] }}
-                            <span class="text-gray-500">×{{ $item['unidades'] }}</span>
-                        </p>
-
-                        <ul class="text-xs text-gray-700 space-y-1 mt-1">
-                            <li>
-                                <strong>Base:</strong>
-                                {{ $d['Base'] ?? '—' }}
-                            </li>
-                            <li>
-                                <strong>Proteínas:</strong>
-                                {{ $proteCounts ? implode(', ', $proteCounts) : '—' }}
-                            </li>
-                            <li>
-                                <strong>Vegetales:</strong>
-                                {{ $vegCounts ? implode(', ', $vegCounts) : '—' }}
-                            </li>
-                            @if ($d['Sin queso'] ?? false)
-                                <li class="text-amber-700">Sin queso crema</li>
-                            @endif
-                            @if ($d['Sin cebollín'] ?? false)
-                                <li class="text-amber-700">Sin cebollín</li>
-                            @endif
-                        </ul>
-
-                        <p class="text-sm text-gray-600 mt-1">
-                            Subtotal: ${{ number_format($itemSubtotal, 2, ',', '.') }}
-                        </p>
-                    </div>
-                @endforeach
-            </div>
-
-            {{-- === FORM === --}}
-            <form id="checkoutForm" action="{{ route('checkout.store') }}" method="POST"
-                class="space-y-6 bg-white shadow rounded-lg p-5 border border-slate-100">
-                @csrf
-
-            {{-- Opciones de entrega --}}
-            <div>
-                <h3 class="font-semibold mb-2">Método de entrega</h3>
-
-                <div class="flex flex-col gap-2">
-                    <label class="inline-flex items-center gap-2">
-                        <input type="radio" name="metodo_entrega" value="pickup" class="text-green-600"
-                            checked onclick="updateDelivery()">
-                        <span>
-                            <span class="font-medium">Retiro en tienda</span>
-                            <span class="block text-xs text-gray-500">Sin costo adicional</span>
-                        </span>
-                    </label>
-
-                    <label class="inline-flex items-center gap-2">
-                        <input type="radio" name="metodo_entrega" value="delivery" class="text-green-600"
-                            onclick="updateDelivery()">
-                        <span>
-                            <span class="font-medium">Delivery a domicilio</span>
-                            <span class="block text-xs text-gray-500">Base $2.500 + $500 por km fuera de San José</span>
-                        </span>
-                    </label>
-                </div>
-
-                {{-- Opciones de delivery --}}
-                <div id="deliveryOptions" class="mt-4 ml-1 hidden space-y-3">
-                    <p class="text-sm text-gray-600">Selecciona tu zona:</p>
-                    <label class="inline-flex items-center gap-2">
-                        <input type="radio" name="zona_delivery" value="dentro" class="text-green-600"
-                            onclick="updateDelivery()">
-                        Dentro de San José (+$2.500)
-                    </label>
-
-                    <label class="inline-flex items-center gap-2">
-                        <input type="radio" name="zona_delivery" value="fuera" class="text-green-600"
-                            onclick="updateDelivery()">
-                        Fuera de San José
-                    </label>
-
-                    {{-- Km input --}}
-                    <div id="kmBox" class="mt-2 ml-6 hidden">
-                        <label for="kms_fuera" class="text-sm font-medium">Kms aproximados desde San José</label>
-                        <div class="flex items-center gap-3 mt-1">
-                            <input type="number" name="kms_fuera" id="kms_fuera" min="1" value="1"
-                                class="border p-1 w-24 rounded" oninput="updateDelivery()">
-                            <span class="text-xs text-gray-500">Recargo: $2.500 + $500 por km</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Totales dinámicos --}}
-            <div class="border-t pt-4 space-y-1 text-right bg-slate-50 rounded p-4">
-                <p class="font-semibold text-slate-600">
-                    Subtotal: <span id="subtotalAmount">${{ number_format($subtotal, 2, ',', '.') }}</span>
-                </p>
-                <p id="deliveryLine" class="font-semibold text-slate-600 hidden">
-                    Delivery: <span id="deliveryCost">$0</span>
-                </p>
-                <p class="text-xl font-bold text-slate-900">
-                    Total a pagar: <span id="totalPay">${{ number_format($subtotal, 2, ',', '.') }}</span>
-                </p>
-            </div>
-
-            {{-- Campos cliente --}}
-            <div class="space-y-4">
-                <div>
-                    <label for="cliente_nombre" class="block font-medium">Nombre completo:</label>
-                    <input type="text" id="cliente_nombre" name="cliente_nombre" value="{{ old('cliente_nombre') }}"
-                        class="border p-2 w-full" required>
-                </div>
-
-                <div>
-                    <label for="cliente_telefono" class="block font-medium">Teléfono:</label>
-                    <input type="tel" id="cliente_telefono" name="cliente_telefono"
-                        value="{{ old('cliente_telefono') }}" class="border p-2 w-full" required>
-                </div>
-
-                <div id="addressGroup" class="hidden">
-                    <label for="cliente_direccion" class="block font-medium">Dirección de entrega:</label>
-                    <input type="text" id="cliente_direccion" name="cliente_direccion"
-                        value="{{ old('cliente_direccion') }}" placeholder="Calle, número, referencia…"
-                        class="border p-2 w-full">
-                    <p class="text-xs text-gray-500 mt-1">Solo solicitamos dirección cuando seleccionas delivery.</p>
-                </div>
-
-                <div>
-                    <label for="cliente_comentarios" class="block font-medium">Comentarios (opcional):</label>
-                    <textarea id="cliente_comentarios" name="cliente_comentarios" rows="3" class="border p-2 w-full">{{ old('cliente_comentarios') }}</textarea>
-                </div>
-            </div>
-
-            <button type="submit" class="w-full bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-                Confirmar Pedido
-            </button>
-        </form>
+            <section aria-labelledby="checkout-payment-title" class="rounded-2xl border border-[var(--akila-gray-200)] bg-[var(--akila-black)] p-6 text-white sm:p-8">
+                <p class="mb-2 text-xs font-bold tracking-widest text-[var(--akila-orange)]">04 · ÚLTIMO PASO</p><h2 id="checkout-payment-title" class="mb-4 text-xl font-bold">Pago</h2><p class="mb-5 text-sm leading-6 text-[var(--akila-gray-200)]">Continuarás a Mercado Pago para revisar el importe y realizar el pago. El estado de pago se actualizará cuando se verifique la transacción.</p>
+                <x-store.form-button class="w-full hover:bg-[var(--akila-charcoal)]">Continuar a Mercado Pago →</x-store.form-button>
+            </section>
         </div>
-    </div>
-
-    @push('scripts')
-        <script>
-            /* Parámetros */
-            const SUBTOTAL = {{ $subtotal }};
-            const COSTO_BASE = 2500;
-            const COSTO_POR_KM = 500;
-
-            /* Elementos */
-            const deliveryOptions = document.getElementById('deliveryOptions');
-            const kmBox = document.getElementById('kmBox');
-            const kmInput = document.getElementById('kms_fuera');
-            const deliveryLine = document.getElementById('deliveryLine');
-            const deliveryCostEl = document.getElementById('deliveryCost');
-            const totalPayEl = document.getElementById('totalPay');
-            const addressGroup = document.getElementById('addressGroup');
-            const addressInput = document.getElementById('cliente_direccion');
-
-            function updateDelivery() {
-                const metodo = document.querySelector('input[name="metodo_entrega"]:checked').value;
-                let cost = 0;
-
-                if (metodo === 'delivery') {
-                    deliveryOptions.classList.remove('hidden');
-                    addressGroup.classList.remove('hidden');
-                    addressInput.removeAttribute('disabled');
-                    addressInput.setAttribute('required', 'required');
-                    const zona = document.querySelector('input[name="zona_delivery"]:checked');
-                    if (zona) {
-                        if (zona.value === 'dentro') {
-                            kmBox.classList.add('hidden');
-                            cost = COSTO_BASE;
-                        } else {
-                            kmBox.classList.remove('hidden');
-                            const kms = Math.max(1, Number(kmInput.value || 0));
-                            cost = COSTO_BASE + kms * COSTO_POR_KM;
-                        }
-                    }
-                } else {
-                    deliveryOptions.classList.add('hidden');
-                    kmBox.classList.add('hidden');
-                    addressGroup.classList.add('hidden');
-                    addressInput.value = '';
-                    addressInput.setAttribute('disabled', 'disabled');
-                    addressInput.removeAttribute('required');
-                    const selectedZone = document.querySelector('input[name="zona_delivery"]:checked');
-                    if (selectedZone) {
-                        selectedZone.checked = false;
-                    }
-                }
-
-                deliveryLine.classList.toggle('hidden', cost === 0);
-                deliveryCostEl.textContent = formatCurrency(cost);
-                totalPayEl.textContent = formatCurrency(SUBTOTAL + cost);
-            }
-
-            function formatCurrency(value) {
-                return `$${Number(value).toLocaleString('es-CL', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                })}`;
-            }
-
-            // Inicializa
-            updateDelivery();
-        </script>
-    @endpush
+    </form>
 @endsection

@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # Historical invoices must only be served by the authorized controller.
+    RewriteRule ^storage/boletas(?:/|$) - [F,L,NC]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

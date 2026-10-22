@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -19,13 +20,15 @@ class Order extends Model
         'total',
         'status',
         'mp_payment_id',
+        'payment_status',
     ];
 
     protected $casts = [
-        'subtotal'      => 'decimal:2',
+        'payment_updated_at' => 'immutable_datetime',
+        'subtotal' => 'decimal:2',
         'delivery_cost' => 'decimal:2',
-        'total'         => 'decimal:2',
-        'kms_fuera'     => 'integer',
+        'total' => 'decimal:2',
+        'kms_fuera' => 'integer',
     ];
 
     protected $appends = ['envio'];

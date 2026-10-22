@@ -1,10 +1,17 @@
 <?php
+
 // app/Models/Producto.php
 
 namespace App\Models;
 
+use App\Enums\TipoProducto;
+use App\Enums\UnidadComercial;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class Producto extends Model
@@ -29,8 +36,15 @@ class Producto extends Model
 
     protected $guarded = [];
 
+    protected $attributes = ['tipo' => 'simple', 'activo' => true, 'orden' => 0, 'unidad_tipo' => 'pieza'];
+
     protected $casts = [
         'personalizable' => 'boolean',
+        'tipo' => TipoProducto::class,
+        'activo' => 'boolean',
+        'orden' => 'integer',
+        'unidades' => 'integer',
+        'unidad_tipo' => UnidadComercial::class,
     ];
 
     // Generar slug automáticamente
@@ -44,7 +58,7 @@ class Producto extends Model
             $i = 1;
 
             while (Producto::where('slug', $slug)->exists()) {
-                $slug = $original . '-' . $i++;
+                $slug = $original.'-'.$i++;
             }
 
             $p->slug = $slug;
@@ -52,7 +66,7 @@ class Producto extends Model
 
         static::updating(function ($p) {
             // Si el nombre no ha cambiado, no regeneres el slug
-            if (!$p->isDirty('nombre')) {
+            if (! $p->isDirty('nombre')) {
                 return;
             }
 
@@ -61,7 +75,7 @@ class Producto extends Model
             $i = 1;
 
             while (Producto::where('slug', $slug)->where('id', '!=', $p->id)->exists()) {
-                $slug = $original . '-' . $i++;
+                $slug = $original.'-'.$i++;
             }
 
             $p->slug = $slug;
@@ -69,29 +83,58 @@ class Producto extends Model
     }
 
     // Relación con Categoría
-    public function categoria()
+    public function categoria(): BelongsTo
     {
         return $this->belongsTo(Categoria::class);
     }
 
-    public function envolturas() {}
+    public function envolturas(): BelongsToMany
+    {
+        return $this->ingredientes()->where('ingredientes.tipo', 'envoltura');
+    }
 
     // Relación muchos a muchos con Ingredientes (con cantidad_permitida)
-    public function ingredientes()
+    public function ingredientes(): BelongsToMany
     {
         return $this->belongsToMany(Ingrediente::class)
-            ->withPivot('cantidad_permitida');
+            ->using(IngredienteProducto::class)
+            ->withPivot('cantidad_permitida', 'cantidad', 'unidad', 'obligatorio', 'reemplazable', 'orden', 'metadata');
     }
 
     // Relación “swappables” (opcionalmente podrías incluir pivot/timestamps)
-    public function swappables()
+    public function swappables(): BelongsToMany
     {
         return $this->belongsToMany(
             Ingrediente::class,
             'producto_swappable_ingredient'
-        )
-            // ->withPivot('cantidad_permitida') 
-            // ->withTimestamps()
-        ;
+        );
+        // ->withPivot('cantidad_permitida')
+        // ->withTimestamps()
+    }
+
+    public function gruposOpciones(): BelongsToMany
+    {
+        return $this->belongsToMany(GrupoOpcion::class, 'grupo_opcion_producto', 'producto_id', 'grupo_opcion_id')
+            ->using(AsignacionGrupo::class)->withPivot(AsignacionGrupo::COLUMNS)->withTimestamps()->orderByPivot('orden');
+    }
+
+    public function bloques(): HasMany
+    {
+        return $this->hasMany(BloquePromocion::class)->orderBy('orden');
+    }
+
+    public function reglas(): HasMany
+    {
+        return $this->hasMany(ReglaPromocion::class);
+    }
+
+    public function promocion(): HasOne
+    {
+        return $this->hasOne(Promocion::class);
+    }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class, 'product_id');
     }
 }

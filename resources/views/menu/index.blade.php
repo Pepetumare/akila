@@ -1,396 +1,80 @@
 @extends('layouts.app')
 
+@section('title', 'Nuestra carta')
+
 @section('content')
-    <div class="container py-4 mx-auto">
+    @php
+        $activeCategory = $categorias->firstWhere('slug', request('filter'));
+        $activeSort = in_array(request('sort'), ['name_asc', 'name_desc', 'price_asc', 'price_desc'], true)
+            ? request('sort') : 'name_asc';
+        // Reuse the categories already supplied to the page without per-card queries.
+        $productos->each(fn ($product) => $product->setRelation('categoria', $categorias->firstWhere('id', $product->categoria_id)));
+    @endphp
 
-        {{-- ===== Botón hamburguesa (todas las pantallas) ===== --}}
-        <div class="flex justify-between items-center mb-3">
-            <h2 class="text-lg font-bold">Categorías</h2>
-            <button id="toggleMenu" class="p-2 rounded bg-red-600 text-white">
-                <span id="openTxt">☰ Categorías</span>
-                <span id="closeTxt" class="hidden">✕ Cerrar</span>
-            </button>
-        </div>
+    <div class="min-w-0 space-y-8 sm:space-y-10">
+        <header class="max-w-2xl">
+            <p class="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[var(--akila-red)]">Sushi Akila · Mariquina</p>
+            <h1 class="mb-4 text-4xl font-black tracking-tight sm:text-5xl">Nuestra carta</h1>
+            <p class="mb-0 text-base leading-7 text-[var(--akila-gray-700)]">Encuentra tu próximo favorito. Elige una categoría y disfruta sushi preparado al momento, con el sello Akila.</p>
+        </header>
 
-        {{-- ===== Navbar categorías (bloque centrado, estilo profesional) ===== --}}
-        <nav id="catBar"
-            class="hidden bg-white shadow-lg rounded-2xl p-6 mb-6 max-w-lg mx-auto transition-all duration-300">
-            <h3 class="text-xl font-semibold text-gray-700 mb-4 text-center">Filtra tu búsqueda</h3>
-            <ul class="space-y-4">
-                <li>
-                    <a href="{{ route('menu') }}"
-                        class="flex items-center justify-center px-5 py-3 bg-red-50 border border-transparent 
-                      rounded-lg text-base font-medium text-red-600 hover:bg-red-100 hover:shadow 
-                      transition shadow-sm">
-                        Todas las categorías
-                    </a>
-                </li>
-                @foreach ($categorias as $categoria)
+        <section aria-labelledby="menu-categories-title" class="min-w-0 rounded-2xl border border-[var(--akila-gray-200)] bg-white p-4 sm:p-6">
+            <h2 id="menu-categories-title" class="mb-4 text-sm font-bold">Explora por categoría</h2>
+            <nav aria-label="Categorías de la carta" class="overflow-x-auto pb-2 lg:overflow-visible">
+                <ul class="m-0 flex w-max min-w-full list-none gap-2 p-0 lg:w-auto lg:flex-wrap">
                     <li>
-                        <a href="{{ route('menu', ['filter' => $categoria->slug]) }}"
-                            class="flex items-center justify-center px-5 py-3 bg-white border border-gray-200 
-                          rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-red-200 
-                          hover:text-red-600 hover:shadow transition-shadow duration-200">
-                            {{ $categoria->nombre }}
-                        </a>
+                        <a href="{{ route('menu', $activeSort !== 'name_asc' ? ['sort' => $activeSort] : []) }}"
+                            @if(!request()->filled('filter')) aria-current="page" @endif
+                            @class(['inline-flex min-h-12 items-center rounded-full border px-5 py-3 text-sm font-semibold no-underline transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--akila-orange)]',
+                                'border-[var(--akila-black)] bg-[var(--akila-black)] text-white hover:text-white' => !request()->filled('filter'),
+                                'border-[var(--akila-gray-200)] text-[var(--akila-gray-700)] hover:border-[var(--akila-red)] hover:text-[var(--akila-red)]' => request()->filled('filter')])>Toda la carta</a>
                     </li>
-                @endforeach
-            </ul>
-        </nav>
+                    @foreach($categorias as $categoria)
+                        <li>
+                            <a href="{{ route('menu', ['filter' => $categoria->slug, 'sort' => $activeSort]) }}"
+                                @if(request('filter') === $categoria->slug) aria-current="page" @endif
+                                @class(['inline-flex min-h-12 items-center rounded-full border px-5 py-3 text-sm font-semibold no-underline transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--akila-orange)]',
+                                    'border-[var(--akila-black)] bg-[var(--akila-black)] text-white hover:text-white' => request('filter') === $categoria->slug,
+                                    'border-[var(--akila-gray-200)] text-[var(--akila-gray-700)] hover:border-[var(--akila-red)] hover:text-[var(--akila-red)]' => request('filter') !== $categoria->slug])>{{ $categoria->nombre }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </nav>
+        </section>
 
-
-
-
-        {{-- ===== Grid productos ===== --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            @foreach ($productos as $producto)
-                <div class="bg-white rounded-lg shadow hover:shadow-lg transition flex flex-col">
-                    <img src="{{ filled($producto->imagen) ? asset('storage/' . $producto->imagen) : asset('img/no_disponible.png') }}"
-                        class="h-48 w-full object-cover" alt="{{ $producto->nombre }}">
-
-
-                    <div class="p-4 flex-grow flex flex-col">
-                        <h3 class="text-lg font-semibold mb-1">{{ $producto->nombre }}</h3>
-                        <p class="text-sm text-gray-600 mb-3 flex-grow">
-                            {{ Str::limit($producto->descripcion, 60) }}
-                        </p>
-                        <p class="text-xl font-bold text-red-600 mb-4">
-                            ${{ number_format($producto->precio, 0, ',', '.') }} CLP
-                        </p>
-
-                        {{-- Agregar rápido --}}
-                        <form action="{{ route('cart.add') }}" method="POST" class="mb-2">
-                            @csrf
-                            <input type="hidden" name="product_id" value="{{ $producto->id }}">
-                            <input type="hidden" name="unidades" value="1">
-
-                            @if ($producto->personalizable)
-                                {{-- proteínas por defecto --}}
-                                @foreach ($producto->ingredientes->where('tipo', 'proteina') as $ing)
-                                    <input type="hidden" name="Proteínas[]" value="{{ $ing->id }}">
-                                @endforeach
-                                {{-- vegetales por defecto --}}
-                                @foreach ($producto->ingredientes->where('tipo', 'vegetal') as $ing)
-                                    <input type="hidden" name="vegetales[]" value="{{ $ing->id }}">
-                                @endforeach
-                            @endif
-
-                            <button class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition">
-                                Agregar al carrito
-                            </button>
-                        </form>
-
-                        {{-- Personalizar --}}
-                        @if ($producto->personalizable)
-                            <button
-                                class="w-full border border-red-600 text-red-600 py-2 rounded hover:bg-red-50 transition"
-                                data-bs-toggle="modal" data-bs-target="#productModal-{{ $producto->id }}"
-                                onclick="initModal({{ $producto->id }})">
-                                Personalizar producto
-                            </button>
-                        @endif
-                    </div>
+        <section aria-labelledby="menu-products-title">
+            <div class="mb-6 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+                <div class="min-w-0">
+                    <h2 id="menu-products-title" class="mb-2 break-words text-2xl font-bold tracking-tight">{{ $activeCategory?->nombre ?? 'Todos nuestros productos' }}</h2>
+                    <p class="mb-0 text-sm text-[var(--akila-gray-700)]">{{ $productos->total() }} {{ $productos->total() === 1 ? 'producto disponible' : 'productos disponibles' }}</p>
                 </div>
-            @endforeach
-        </div>
+                <form method="GET" action="{{ route('menu') }}" class="flex flex-wrap items-end gap-2">
+                    @if(request()->filled('filter'))<input type="hidden" name="filter" value="{{ request('filter') }}">@endif
+                    <div class="min-w-0 flex-grow">
+                        <label for="menu-sort" class="mb-2 block text-xs font-semibold text-[var(--akila-gray-700)]">Ordenar por</label>
+                        <select id="menu-sort" name="sort" class="min-h-12 w-full rounded-xl border-[var(--akila-gray-200)] bg-white py-3 pl-3 pr-9 text-sm">
+                            @foreach(['name_asc' => 'Nombre: A a Z', 'name_desc' => 'Nombre: Z a A', 'price_asc' => 'Menor precio', 'price_desc' => 'Mayor precio'] as $value => $label)
+                                <option value="{{ $value }}" @selected($activeSort === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button type="submit" class="min-h-12 rounded-xl bg-[var(--akila-black)] px-4 py-3 text-sm font-bold text-white hover:bg-[var(--akila-red)]">Aplicar</button>
+                </form>
+            </div>
 
-        {{-- Paginación --}}
-        <div class="mt-6">
-            {{ $productos->withQueryString()->links() }}
-        </div>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                @forelse($productos as $producto)
+                    <x-store.product-card :product="$producto" :modal="true" />
+                @empty
+                    <div class="col-span-full rounded-2xl border border-[var(--akila-gray-200)] bg-white px-6 py-14 text-center sm:py-20">
+                        <x-store.icon name="menu" class="mx-auto mb-5 h-9 w-9 text-[var(--akila-red)]" />
+                        <h3 class="mb-3 text-xl font-bold">{{ request()->filled('filter') ? 'No hay productos en esta selección' : 'Estamos preparando nuestra carta' }}</h3>
+                        <p class="mx-auto mb-6 max-w-md text-sm leading-6 text-[var(--akila-gray-700)]">{{ request()->filled('filter') ? 'Prueba con otra categoría o vuelve a explorar toda la carta.' : 'Pronto encontrarás aquí los productos disponibles de Sushi Akila.' }}</p>
+                        @if(request()->filled('filter'))<a href="{{ route('menu') }}" class="inline-flex min-h-12 items-center justify-center rounded-xl bg-[var(--akila-red)] px-6 py-3 text-sm font-bold text-white no-underline hover:bg-[var(--akila-black)] hover:text-white">Ver toda la carta</a>@endif
+                    </div>
+                @endforelse
+            </div>
+            @if($productos->hasPages())<div class="mt-10">{{ $productos->withQueryString()->links() }}</div>@endif
+        </section>
     </div>
 @endsection
-
-
-@section('modals')
-    @foreach ($productos->where('personalizable', true) as $producto)
-        @php
-            $howMany = fn($p) => isset($p->cantidad)
-                ? (int) $p->cantidad
-                : (isset($p->cantidad_permitida)
-                    ? (int) $p->cantidad_permitida
-                    : 1);
-
-            $assignedProteins = [];
-            foreach ($producto->ingredientes->where('tipo', 'proteina') as $ing) {
-                $rolls = intdiv($howMany($ing->pivot), 10);
-                for ($i = 0; $i < $rolls; $i++) {
-                    $assignedProteins[] = ['id' => $ing->id, 'nombre' => $ing->nombre];
-                }
-            }
-            $assignedVeggies = [];
-            foreach ($producto->ingredientes->where('tipo', 'vegetal') as $ing) {
-                $rolls = intdiv($howMany($ing->pivot), 10);
-                for ($i = 0; $i < $rolls; $i++) {
-                    $assignedVeggies[] = ['id' => $ing->id, 'nombre' => $ing->nombre];
-                }
-            }
-        @endphp
-
-        <div class="modal fade" id="productModal-{{ $producto->id }}" tabindex="-1"
-            data-proteins='@json($assignedProteins)' data-vegetables='@json($assignedVeggies)'
-            data-all='@json($wrappers->merge($proteins)->merge($vegetables))' data-base-price="{{ $producto->precio }}">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content rounded-xl shadow-lg">
-
-                    {{-- Header --}}
-                    <div class="flex justify-between items-start bg-red-600 text-white px-6 py-4">
-                        <h5 class="text-xl font-semibold">{{ $producto->nombre }}</h5>
-                        <button type="button" class="btn-close opacity-90 invert" data-bs-dismiss="modal"></button>
-                    </div>
-
-                    {{-- Body --}}
-                    <div class="grid md:grid-cols-2 gap-6 p-6">
-                        <img src="{{ $producto->imagen ? asset('storage/' . $producto->imagen) : asset('img/no_disponible.png') }}"
-                            class="w-full rounded-lg object-cover" alt="{{ $producto->nombre }}">
-
-                        <div class="flex flex-col gap-6">
-                            {{-- Precio --}}
-                            <div>
-                                <span class="text-gray-500">Precio total</span>
-                                <p id="price-{{ $producto->id }}" class="text-3xl font-extrabold text-red-600">
-                                    ${{ number_format($producto->precio, 0, ',', '.') }} CLP
-                                </p>
-                            </div>
-
-                            {{-- Proteínas --}}
-                            <div>
-                                <h6 class="font-semibold mb-2">Proteínas (rolls ×10 cortes)</h6>
-                                <ul id="prot-list-{{ $producto->id }}" class="space-y-2"></ul>
-                            </div>
-                            {{-- Vegetales --}}
-                            <div>
-                                <h6 class="font-semibold mb-2">Vegetales (rolls ×10 cortes)</h6>
-                                <ul id="veg-list-{{ $producto->id }}" class="space-y-2"></ul>
-                            </div>
-
-                            {{-- Selector swap --}}
-                            <div id="swap-box-{{ $producto->id }}" class="hidden mt-2 flex items-center gap-2">
-                                <select id="swap-select-{{ $producto->id }}"
-                                    class="form-select flex-1 border-gray-300 rounded-lg">
-                                    <option value="">-- elige --</option>
-                                </select>
-                                <button class="btn btn-success btn-sm"
-                                    onclick="confirmSwap({{ $producto->id }})">OK</button>
-                                <button class="btn btn-secondary btn-sm"
-                                    onclick="cancelSwap({{ $producto->id }})">Cancelar</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Footer + Form --}}
-                    <form id="form-{{ $producto->id }}" action="{{ route('cart.add') }}" method="POST"
-                        class="bg-gray-50 px-6 py-4 flex flex-col gap-6">
-                        @csrf
-                        <input type="hidden" name="product_id" value="{{ $producto->id }}">
-                        <input type="hidden" name="unidades" value="1">
-                        <input type="hidden" id="adjust-{{ $producto->id }}" name="price_adjustment" value="0">
-
-                        {{-- hidden inputs inyectados por JS --}}
-
-                        {{-- envolturas --}}
-
-                        @php
-                            $envolturasDisponibles = $producto->ingredientes->where('tipo', 'envoltura');
-                        @endphp
-
-                        <div>
-                            <h6 class="font-semibold mb-2">Elige una Envoltura</h6>
-                            <div class="flex flex-wrap gap-2">
-                                @foreach ($envolturasDisponibles as $env)
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="envoltura_id" value="{{ $env->id }}" required
-                                            class="sr-only peer">
-                                        <span
-                                            class="px-3 py-1 rounded-full border border-red-600 text-red-600 text-sm transition peer-checked:bg-red-600 peer-checked:text-white">
-                                            {{ $env->nombre }}
-                                        </span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-
-
-                        {{-- ==== Sin queso / Sin cebollín ==== --}}
-                        <div class="flex flex-col gap-2">
-                            <label class="inline-flex items-center gap-2">
-                                <input type="checkbox" name="cream_cheese" value="1" class="h-4 w-4 text-red-600">
-                                Sin queso crema
-                            </label>
-                            <label class="inline-flex items-center gap-2">
-                                <input type="checkbox" name="scallions" value="1" class="h-4 w-4 text-red-600">
-                                Sin cebollín
-                            </label>
-                        </div>
-
-                        {{-- ==== Botón Agregar ==== --}}
-                        <button type="submit" class="btn btn-primary w-full">
-                            Agregar al carrito
-                        </button>
-                    </form>
-
-                </div>
-            </div>
-        </div>
-    @endforeach
-@endsection
-
-
-@push('styles')
-    <style>
-        .chip {
-            @apply inline-flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full text-sm;
-        }
-
-        .old-swap {
-            @apply text-gray-500 underline;
-        }
-    </style>
-@endpush
-
-
-@push('scripts')
-    <script>
-        const swapState = {};
-
-        function initModal(prodId) {
-            const modal = document.getElementById(`productModal-${prodId}`);
-            if (!swapState[prodId]) {
-                const protInit = JSON.parse(modal.dataset.proteins).map(o => o.id);
-                const vegInit = JSON.parse(modal.dataset.vegetables).map(o => o.id);
-                swapState[prodId] = {
-                    proteina: protInit,
-                    vegetal: vegInit,
-                    basePrice: +modal.dataset.basePrice,
-                    adjust: 0,
-                    changes: {
-                        proteina: {},
-                        vegetal: {}
-                    }
-                };
-            }
-            refreshUI(prodId);
-        }
-
-        function startSwap(prodId, idx, group) {
-            const modal = document.getElementById(`productModal-${prodId}`);
-            const all = JSON.parse(modal.dataset.all);
-            const sel = document.getElementById(`swap-select-${prodId}`);
-            const st = swapState[prodId];
-
-            // cuenta actual
-            const counts = st[group].reduce((a, id) => (a[id] = (a[id] || 0) + 1, a), {});
-            st.swapping = {
-                idx,
-                group
-            };
-            sel.innerHTML = '<option value="">-- elige --</option>';
-            all.filter(i => i.tipo === group && i.id !== st[group][idx])
-                .filter(i => {
-                    const cnt = counts[i.id] || 0;
-                    const isSalmon = i.nombre.toLowerCase().includes('salm');
-                    return isSalmon ? cnt < 1 : cnt < 2;
-                })
-                .forEach(i => sel.insertAdjacentHTML(
-                    'beforeend',
-                    `<option value="${i.id}">${i.nombre}</option>`
-                ));
-            document.getElementById(`swap-box-${prodId}`).classList.remove('hidden');
-        }
-
-        function confirmSwap(prodId) {
-            const sel = document.getElementById(`swap-select-${prodId}`);
-            const newId = +sel.value;
-            if (!newId) return;
-            const st = swapState[prodId];
-            const {
-                idx,
-                group
-            } = st.swapping;
-            st[group][idx] = newId;
-            st.changes[group][idx] = st.changes[group][idx] === undefined ?
-                sel.options[sel.selectedIndex].text :
-                st.changes[group][idx];
-            st.adjust++;
-            refreshUI(prodId);
-            cancelSwap(prodId);
-        }
-
-        function cancelSwap(prodId) {
-            document.getElementById(`swap-box-${prodId}`).classList.add('hidden');
-        }
-
-        function refreshUI(prodId) {
-            const modal = document.getElementById(`productModal-${prodId}`);
-            const all = JSON.parse(modal.dataset.all);
-            const st = swapState[prodId];
-            const form = document.getElementById(`form-${prodId}`);
-
-            ['proteina', 'vegetal'].forEach(group => {
-                const list = document.getElementById(
-                    `${group==='proteina'?'prot':'veg'}-list-${prodId}`
-                );
-                list.innerHTML = '';
-                st[group].forEach((id, idx) => {
-                    const ing = all.find(i => i.id === id) || {
-                        nombre: id
-                    };
-                    const changed = st.changes[group][idx] !== undefined;
-                    const oldName = changed ? st.changes[group][idx] : '';
-                    list.insertAdjacentHTML('beforeend', `
-                    <li class="chip">
-                        ${changed ? `<span class="old-swap">${oldName}</span> ` : ''}
-                        ${ing.nombre} <span class="text-xs">×10</span>
-                        <button type="button"
-                                class="btn btn-sm btn-outline-warning"
-                                onclick="startSwap(${prodId},${idx},'${group}')">
-                            Cambiar
-                        </button>
-                    </li>`);
-                });
-            });
-
-            // inputs ocultos
-            form.querySelectorAll('.ing-input').forEach(el => el.remove());
-            st.proteina.forEach(id =>
-                form.insertAdjacentHTML('beforeend',
-                    `<input type="hidden" name="Proteínas[]" value="${id}" class="ing-input">`
-                )
-            );
-            st.vegetal.forEach(id =>
-                form.insertAdjacentHTML('beforeend',
-                    `<input type="hidden" name="vegetales[]" value="${id}" class="ing-input">`
-                )
-            );
-
-            // precio
-            document.getElementById(`adjust-${prodId}`).value = st.adjust * 1000;
-            document.getElementById(`price-${prodId}`).textContent =
-                `$${(st.basePrice + st.adjust*1000).toLocaleString('de-DE')} CLP`;
-        }
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const toggleButton = document.getElementById('toggleMenu');
-            const catBar = document.getElementById('catBar');
-            const openTxt = document.getElementById('openTxt');
-            const closeTxt = document.getElementById('closeTxt');
-
-            // Toggle del menú
-            toggleButton.addEventListener('click', () => {
-                catBar.classList.toggle('hidden');
-                openTxt.classList.toggle('hidden');
-                closeTxt.classList.toggle('hidden');
-            });
-
-            // Al hacer click en cualquier categoría, ocultar el menú
-            catBar.querySelectorAll('a').forEach(link => {
-                link.addEventListener('click', () => {
-                    catBar.classList.add('hidden');
-                    openTxt.classList.remove('hidden');
-                    closeTxt.classList.add('hidden');
-                });
-            });
-        });
-    </script>
-@endpush

@@ -23,13 +23,13 @@ class ProfileController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
-            'name'      => 'required|string|max:255',
-            'email'     => 'required|email|unique:users,email,' . $user->id,
-            'phone'     => 'nullable|string|max:20',
-            'address'   => 'nullable|string|max:255',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,'.$user->id,
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255',
             'birthdate' => 'nullable|date',
-            'password'  => 'nullable|string|min:8|confirmed',
-            'avatar'    => 'nullable|image|max:2048', // máximo 2MB
+            'password' => 'nullable|string|min:8|confirmed',
+            'avatar' => 'nullable|image|max:2048', // máximo 2MB
         ]);
 
         if ($request->hasFile('avatar')) {
@@ -43,6 +43,9 @@ class ProfileController extends Controller
         }
 
         $user->fill(collect($validated)->except(['password', 'avatar'])->toArray());
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
 
         if (! empty($validated['password'] ?? null)) {
             $user->password = Hash::make($validated['password']);
@@ -56,6 +59,7 @@ class ProfileController extends Controller
     public function orders()
     {
         $orders = auth()->user()->orders()->latest()->get(); // si tienes relación definida
+
         return view('profile.pedidos', compact('orders'));
     }
 }

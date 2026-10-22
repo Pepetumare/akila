@@ -114,6 +114,9 @@
                     <td class="right">{{ $item->unidades }}</td>
                     <td class="right">${{ number_format($item->precio_unit, 2, ',', '.') }}</td>
                     <td>
+                        @if($d->has('Bloques'))
+                            <x-menu-selection-summary :detail="$item->detalle" />
+                        @else
                         <div class="small"><strong>Base:</strong> {{ $d->get('Base', '—') }}</div>
                         <div class="small"><strong>Proteínas:</strong>
                             {{ collect($d->get('Proteínas', []))->join(', ') ?: '—' }}</div>
@@ -124,6 +127,7 @@
                         @endif
                         @if ($d->get('Sin cebollín'))
                             <div class="small">Sin cebollín</div>
+                        @endif
                         @endif
                     </td>
                     <td class="right font-bold">

@@ -2,88 +2,73 @@
 
 namespace App\Services;
 
-use MercadoPago\MercadoPagoConfig;
-use MercadoPago\Client\Preference\PreferenceClient;
 use App\Models\Order;
+use Illuminate\Support\Facades\URL;
+use MercadoPago\Client\Payment\PaymentClient;
+use MercadoPago\Client\Preference\PreferenceClient;
+use MercadoPago\MercadoPagoConfig;
 
 class MercadoPagoService
 {
-    protected PreferenceClient $client;
-
-    public function __construct()
+    private function configure(): void
     {
-        // 1) Autenticación con tu token de .env
-        MercadoPagoConfig::setAccessToken(
-            config('services.mercadopago.access_token')
-        );
-
-        // 2) Para pruebas locales, desactiva la verificación SSL
-        //    (usa HTTP interno o skip de SSL)
-        if (app()->environment('local')) {
-            MercadoPagoConfig::setRuntimeEnvironment(
-                MercadoPagoConfig::LOCAL
-            );  // :contentReference[oaicite:0]{index=0}
+        $token = config('services.mercadopago.access_token');
+        if (! is_string($token) || $token === '') {
+            throw new \RuntimeException('Mercado Pago no está configurado.');
         }
-
-        // 3) Instancia el client
-        $this->client = new PreferenceClient();
+        MercadoPagoConfig::setAccessToken($token);
+        // Keep the SDK's server runtime and TLS verification in every environment.
     }
 
-    /**
-     * Crea la preferencia y obtiene la URL de checkout.
-     */
+    public function getPayment(string $id): array
+    {
+        $this->configure();
+        $payment = (new PaymentClient)->get((int) $id);
+
+        return [
+            'id' => $payment->id, 'external_reference' => $payment->external_reference,
+            'status' => $payment->status, 'transaction_amount' => $payment->transaction_amount,
+            'currency_id' => $payment->currency_id, 'date_last_updated' => $payment->date_last_updated,
+        ];
+    }
+
     public function createPreference(Order $order): string
     {
+        $this->configure();
         $order->loadMissing('items');
-
-        $items = $order->items->map(function ($item) {
-            return [
-                'id'          => (string) $item->product_id,
-                'title'       => $item->nombre,
-                'quantity'    => (int) $item->unidades,
-                'unit_price'  => (float) $item->precio_unit,
-                'currency_id' => 'CLP',
-            ];
-        })->values()->all();
-
-        if (empty($items)) {
-            throw new \RuntimeException('No se pudieron generar los items para Mercado Pago.');
+        $items = $order->items->map(fn ($item) => [
+            'id' => (string) $item->product_id, 'title' => $item->nombre,
+            'quantity' => (int) $item->unidades, 'unit_price' => (float) $item->precio_unit,
+            'currency_id' => 'CLP',
+        ])->values()->all();
+        if ($items === []) {
+            throw new \RuntimeException('Pedido sin productos.');
         }
-
+        // Delivery is an explicit CLP item, so the verified amount includes it.
+        if ((float) $order->delivery_cost > 0) {
+            $items[] = ['id' => 'delivery', 'title' => 'Delivery', 'quantity' => 1,
+                'unit_price' => (float) $order->delivery_cost, 'currency_id' => 'CLP'];
+        }
+        $backUrls = [];
+        foreach (['success', 'failure', 'pending'] as $name) {
+            $backUrls[$name] = URL::temporarySignedRoute('checkout.'.$name, now()->addDays(2), ['order' => $order->id]);
+        }
         $payload = [
-            'items'              => $items,
-            'external_reference' => (string) $order->id,
-            'payer'              => [
-                'name'  => $order->cliente_nombre,
-                'phone' => ['number' => $order->cliente_telefono],
-            ],
-            'back_urls'      => [
-                'success' => route('checkout.success'),
-                'failure' => route('checkout.failure'),
-                'pending' => route('checkout.pending'),
-            ],
-            'auto_return'      => 'approved',
-            'notification_url' => route('checkout.webhook'),
-            'statement_descriptor' => 'Sushi Akila',
+            'items' => $items, 'external_reference' => (string) $order->id,
+            'payer' => ['name' => $order->cliente_nombre, 'phone' => ['number' => $order->cliente_telefono]],
+            'back_urls' => $backUrls, 'auto_return' => 'approved',
+            'notification_url' => route('checkout.webhook'), 'statement_descriptor' => 'Sushi Akila',
+            'expires' => true,
+            'expiration_date_to' => now()->addDay()->toIso8601String(),
         ];
-
-        if ($order->metodo_entrega === 'delivery') {
-            $payload['shipments'] = [
-                'receiver_address' => array_filter([
-                    'street_name' => $order->cliente_direccion,
-                    'zip_code'    => '0',
-                    'city_name'   => 'San José',
-                    'state_name'  => 'Costa Rica',
-                ], fn ($value) => !is_null($value) && $value !== ''),
-                'cost' => (float) $order->delivery_cost,
-                'mode' => 'not_specified',
-            ];
+        // No fabricated postcode, city or province. CLP identifies the Chilean checkout;
+        // the actual delivery address remains on the order for restaurant fulfillment.
+        $preference = (new PreferenceClient)->create($payload);
+        $url = app()->environment('production') ? $preference->init_point : $preference->sandbox_init_point;
+        if (! is_string($url) || ! str_starts_with($url, 'https://')) {
+            throw new \RuntimeException('URL de pago inválida.');
         }
 
-        $preference = $this->client->create($payload);
-
-        return app()->environment('production')
-            ? $preference->init_point
-            : $preference->sandbox_init_point;
+        return $url;
     }
 }

@@ -3,74 +3,68 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Services\CheckoutSessionService;
+use App\Services\MercadoPagoPaymentService;
+use App\Services\MercadoPagoWebhookSignature;
+use App\Services\OrderAccessService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class MercadoPagoController extends Controller
 {
-    /**
-     * Callback cuando el pago fue aprobado (auto_return=approved).
-     * URL: /checkout/success?status=approved&payment_id=...&external_reference=ORDER_ID
-     */
-    public function success(Request $request)
+    public function success(Request $request, MercadoPagoPaymentService $payments, OrderAccessService $access)
     {
-        $orderId    = $request->query('external_reference');
-        $status     = $request->query('status');
-        $paymentId  = $request->query('payment_id');
-        $order      = Order::findOrFail($orderId);
+        return $this->paymentReturn($request, $payments, $access);
+    }
 
-        // Solo marcamos pagado si MP confirmó approved
-        if ($status === 'approved') {
-            $order->update([
-                'status'         => 'pagado',
-                'mp_payment_id'  => $paymentId,
-            ]);
-            // Limpiamos el carrito de la sesión
-            $request->session()->forget('cart');
-        } else {
-            // otros posibles estados: rejected, in_process, etc.
-            $order->update(['status' => $status]);
+    public function failure(Request $request, MercadoPagoPaymentService $payments, OrderAccessService $access)
+    {
+        return $this->paymentReturn($request, $payments, $access);
+    }
+
+    public function pending(Request $request, MercadoPagoPaymentService $payments, OrderAccessService $access)
+    {
+        return $this->paymentReturn($request, $payments, $access);
+    }
+
+    private function paymentReturn(Request $request, MercadoPagoPaymentService $payments, OrderAccessService $access)
+    {
+        $data = $request->validate(['order' => 'nullable|integer|min:1', 'external_reference' => 'nullable|integer|min:1', 'payment_id' => 'nullable|string|regex:/^[1-9][0-9]{0,17}$/']);
+        // The external reference is only a locator, never evidence of payment/access.
+        $order = Order::findOrFail($data['order'] ?? $data['external_reference'] ?? 0);
+        $access->authorize($request, $order, true);
+        $verificationError = null;
+        if (! empty($data['payment_id'])) {
+            try {
+                $order = $payments->synchronize($data['payment_id'], $order);
+            } catch (\Throwable $e) {
+                Log::warning('Mercado Pago return could not be verified', ['order_id' => $order->id, 'exception' => $e::class]);
+                $verificationError = 'Aún no pudimos verificar el pago. No vuelvas a pagar si ya se realizó el cobro.';
+            }
+        }
+        app(CheckoutSessionService::class)->complete($request, $order);
+        $downloadUrl = $access->downloadUrl($order);
+
+        return response()->view('checkout.thankyou', compact('order', 'downloadUrl', 'verificationError'))->header('Cache-Control', 'private, no-store');
+    }
+
+    public function webhook(Request $request, MercadoPagoWebhookSignature $signature, MercadoPagoPaymentService $payments)
+    {
+        $id = $signature->validate($request);
+        if ($request->input('type') !== 'payment') {
+            return response()->json(['received' => true, 'ignored' => true]);
+        }
+        try {
+            $payments->synchronize($id);
+        } catch (ValidationException) {
+            return response()->json(['error' => 'invalid_payment'], 422);
+        } catch (\Throwable $e) {
+            Log::error('Mercado Pago webhook temporarily unavailable', ['payment_id' => $id, 'exception' => $e::class]);
+
+            return response()->json(['error' => 'verification_unavailable'], 503);
         }
 
-        return view('checkout.thankyou', compact('order'));
-    }
-
-    /**
-     * Callback si el usuario no completa el pago o MP lo rechaza.
-     * URL: /checkout/failure?status=rejected&payment_id=...&external_reference=ORDER_ID
-     */
-    public function failure(Request $request)
-    {
-        $orderId = $request->query('external_reference');
-        $order   = Order::findOrFail($orderId);
-        $order->update(['status' => 'rechazado']);
-
-        return view('checkout.error', compact('order'));
-    }
-
-    /**
-     * Callback para pagos pendientes.
-     * URL: /checkout/pending?status=pending&payment_id=...&external_reference=ORDER_ID
-     */
-    public function pending(Request $request)
-    {
-        $orderId = $request->query('external_reference');
-        $order   = Order::findOrFail($orderId);
-        $order->update(['status' => 'pendiente_mp']);
-
-        return view('checkout.pending', compact('order'));
-    }
-
-    /**
-     * Webhook para notificaciones de Mercado Pago.
-     * Aquí puedes verificar el payment_id o topic y actualizar el Order.
-     */
-    public function webhook(Request $request)
-    {
-        // Ejemplo muy básico: sólo respondemos 200
-        // Para producción deberías:
-        // 1) Verificar $request->input('type') === 'payment'
-        // 2) Recuperar el payment_id: $request->input('data.id')
-        // 3) Consultar la API de MP y actualizar tu Order según payment_status
-        return response()->json(['received' => true], 200);
+        return response()->json(['received' => true]);
     }
 }

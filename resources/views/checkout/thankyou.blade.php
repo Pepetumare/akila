@@ -1,18 +1,16 @@
 @extends('layouts.app')
-
-@section('title', 'Gracias - Sushi Akila')
-
+@section('title', 'Detalle de tu pedido')
 @section('content')
-    <div class="container mx-auto p-6 text-center">
-        <h2 class="text-2xl font-bold mb-4">¡Gracias por tu pedido!</h2>
-        <p>Hemos recibido tu orden correctamente.</p>
-        <a href="{{ route('checkout.download', $order) }}"
-            class="mt-4 inline-block bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600">
-            Descargar Boleta
-        </a>
-
-        <a href="{{ route('menu') }}" class="mt-4 inline-block text-red-500 hover:underline">
-            Seguir comprando
-        </a>
+    <div class="mx-auto max-w-3xl space-y-6">
+        <header><p class="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[var(--akila-red)]">Sushi Akila · Tu pedido</p><h1 class="mb-3 text-3xl font-black tracking-tight sm:text-4xl">Pedido #{{ $order->id }}</h1><p class="mb-0 text-sm leading-6 text-[var(--akila-gray-700)]">Hemos recibido tu orden. Consulta aquí los estados del pedido y del pago.</p></header>
+        @if($verificationError ?? null)<div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{{ $verificationError }}</div>@endif
+        <section aria-labelledby="order-status-title" class="rounded-2xl border border-[var(--akila-gray-200)] bg-white p-6 sm:p-8">
+            <h2 id="order-status-title" class="mb-6 text-xl font-bold">Estado de tu pedido</h2><dl class="mb-0 grid gap-6 sm:grid-cols-2"><div><dt class="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--akila-gray-700)]">Pedido</dt><dd class="mb-0"><x-store.order-status :status="$order->status" /></dd></div><div><dt class="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--akila-gray-700)]">Estado del pago</dt><dd class="mb-0"><x-store.order-status :status="$order->payment_status" :payment="true" /></dd></div><div><dt class="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--akila-gray-700)]">Fecha</dt><dd class="mb-0 text-sm"><time datetime="{{ $order->created_at->toIso8601String() }}">{{ $order->created_at->format('d/m/Y · H:i') }}</time></dd></div><div><dt class="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--akila-gray-700)]">Total del pedido</dt><dd class="mb-0"><x-store.price :amount="$order->total" class="text-2xl" /></dd></div></dl>
+        </section>
+        <section aria-labelledby="order-items-title" class="rounded-2xl border border-[var(--akila-gray-200)] bg-white p-6 sm:p-8">
+            <h2 id="order-items-title" class="mb-5 text-xl font-bold">Detalle</h2><ul class="m-0 list-none divide-y divide-[var(--akila-gray-200)] p-0">@foreach($order->items as $item)<li class="flex flex-wrap justify-between gap-3 py-4"><span class="break-words text-sm font-semibold">{{ $item->nombre }} <span class="font-normal text-[var(--akila-gray-700)]">× {{ $item->unidades }}</span></span><x-store.price :amount="$item->total" class="text-sm" />@if(isset($item->detalle['Bloques']))<div class="w-full"><x-menu-selection-summary :detail="$item->detalle" /></div>@endif</li>@endforeach</ul>
+            <dl class="mb-0 mt-5 space-y-3 border-t border-[var(--akila-gray-200)] pt-5 text-sm"><div class="flex flex-wrap justify-between gap-2"><dt>Subtotal</dt><dd class="mb-0"><x-store.price :amount="$order->subtotal" /></dd></div><div class="flex flex-wrap justify-between gap-2"><dt>Entrega: {{ $order->metodo_entrega === 'delivery' ? 'Delivery' : 'Retiro en tienda' }}</dt><dd class="mb-0"><x-store.price :amount="$order->delivery_cost" /></dd></div></dl>
+        </section>
+        <div class="flex flex-col gap-3 sm:flex-row"><a href="{{ $downloadUrl }}" class="inline-flex min-h-12 items-center justify-center rounded-xl bg-[var(--akila-red)] px-6 py-3 text-sm font-bold text-white no-underline hover:bg-[var(--akila-black)] hover:text-white">Descargar boleta</a><a href="{{ route('menu') }}" class="inline-flex min-h-12 items-center justify-center rounded-xl border border-[var(--akila-gray-200)] bg-white px-6 py-3 text-sm font-semibold text-[var(--akila-gray-900)] no-underline hover:text-[var(--akila-red)]">Seguir comprando</a>@auth<a href="{{ route('profile.orders') }}" class="inline-flex min-h-12 items-center justify-center px-4 py-3 text-sm font-semibold text-[var(--akila-gray-700)] underline underline-offset-4">Mis pedidos</a>@endauth</div>
     </div>
 @endsection

@@ -1,47 +1,23 @@
 <x-guest-layout>
-    <!-- Session Status -->
+    <p class="mb-2 text-xs font-bold uppercase tracking-widest text-[var(--akila-red)]">Bienvenido de vuelta</p>
+    <h1 class="mb-3 text-3xl font-bold tracking-tight">Ingresa a tu cuenta</h1>
+    <p class="mb-7 text-sm leading-6 text-[var(--akila-gray-700)]">Revisa tus pedidos y administra tus datos.</p>
     <x-auth-session-status class="mb-4" :status="session('status')" />
-
-    <form method="POST" action="{{ route('login') }}">
+    <form method="POST" action="{{ route('login') }}" class="space-y-5">
         @csrf
-
-        <!-- Email Address -->
         <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            <label for="email" class="mb-2 block text-sm font-semibold">Correo electrónico</label>
+            <x-store.form-input id="email" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" :aria-invalid="$errors->has('email') ? 'true' : 'false'" aria-describedby="email-error" />
+            <div id="email-error"><x-input-error :messages="$errors->get('email')" class="mt-2" /></div>
         </div>
-
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+        <div>
+            <label for="password" class="mb-2 block text-sm font-semibold">Contraseña</label>
+            <x-store.form-input id="password" type="password" name="password" required autocomplete="current-password" :aria-invalid="$errors->has('password') ? 'true' : 'false'" aria-describedby="password-error" />
+            <div id="password-error"><x-input-error :messages="$errors->get('password')" class="mt-2" /></div>
         </div>
-
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
-            </label>
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
-
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
-        </div>
+        <label for="remember_me" class="inline-flex min-h-11 cursor-pointer items-center gap-3 text-sm text-[var(--akila-gray-700)]"><input id="remember_me" type="checkbox" name="remember" class="h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-600">Recordarme</label>
+        <x-store.form-button class="w-full">Ingresar</x-store.form-button>
+        @if(Route::has('password.request'))<a href="{{ route('password.request') }}" class="flex min-h-11 items-center justify-center text-sm text-[var(--akila-gray-700)] underline underline-offset-4 hover:text-[var(--akila-red)]">¿Olvidaste tu contraseña?</a>@endif
     </form>
+    <p class="mb-0 mt-6 border-t border-[var(--akila-gray-200)] pt-6 text-center text-sm text-[var(--akila-gray-700)]">¿Primera vez aquí? <a href="{{ route('register') }}" class="inline-flex min-h-11 items-center font-bold text-[var(--akila-gray-900)] underline underline-offset-4">Crea tu cuenta</a></p>
 </x-guest-layout>

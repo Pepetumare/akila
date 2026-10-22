@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 test('profile page is displayed', function () {
     $user = User::factory()->create();
@@ -17,6 +19,7 @@ test('profile information can be updated', function () {
 
     $response = $this
         ->actingAs($user)
+        ->from('/profile')
         ->patch('/profile', [
             'name' => 'Test User',
             'email' => 'test@example.com',
@@ -38,6 +41,7 @@ test('email verification status is unchanged when the email address is unchanged
 
     $response = $this
         ->actingAs($user)
+        ->from('/profile')
         ->patch('/profile', [
             'name' => 'Test User',
             'email' => $user->email,
@@ -50,7 +54,7 @@ test('email verification status is unchanged when the email address is unchanged
     $this->assertNotNull($user->refresh()->email_verified_at);
 });
 
-test('user can delete their account', function () {
+test('account deletion is not offered', function () {
     $user = User::factory()->create();
 
     $response = $this
@@ -59,27 +63,30 @@ test('user can delete their account', function () {
             'password' => 'password',
         ]);
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/');
-
-    $this->assertGuest();
-    $this->assertNull($user->fresh());
+    $response->assertStatus(405);
+    $this->assertAuthenticatedAs($user);
+    $this->assertNotNull($user->fresh());
 });
 
-test('correct password must be provided to delete account', function () {
+test('guests cannot view or update profiles', function () {
+    $this->get('/profile')->assertRedirect(route('login'));
+    $this->patch('/profile', ['name' => 'Guest', 'email' => 'guest@example.com'])
+        ->assertRedirect(route('login'));
+});
+
+test('profile form supports multipart uploads through PATCH method spoofing', function () {
+    Storage::fake('public');
     $user = User::factory()->create();
 
-    $response = $this
-        ->actingAs($user)
-        ->from('/profile')
-        ->delete('/profile', [
-            'password' => 'wrong-password',
-        ]);
+    $this->actingAs($user)->get('/profile')
+        ->assertSee('name="_method" value="PATCH"', false);
 
-    $response
-        ->assertSessionHasErrorsIn('userDeletion', 'password')
-        ->assertRedirect('/profile');
+    $this->from('/profile')->post('/profile', [
+        '_method' => 'PATCH',
+        'name' => $user->name,
+        'email' => $user->email,
+        'avatar' => UploadedFile::fake()->image('avatar.jpg'),
+    ])->assertSessionHasNoErrors()->assertRedirect('/profile');
 
-    $this->assertNotNull($user->fresh());
+    Storage::disk('public')->assertExists($user->fresh()->avatar);
 });

@@ -7,6 +7,9 @@
     @endphp
 
     <div class="container mx-auto p-6">
+        @if ($errors->any())
+            <div role="alert">{{ $errors->first() }}</div>
+        @endif
         <h2 class="text-2xl font-bold mb-6">Tu Carrito</h2>
 
         {{-- Flash --}}
@@ -80,6 +83,9 @@
 
                                 {{-- Rolls Detalles --}}
                                 <td class="p-3">
+                                    @if(isset($d['Bloques']))
+                                        <x-menu-selection-summary :detail="$d" />
+                                    @else
                                     <ul class="list-disc list-inside space-y-1">
                                         <li>
                                             <strong>Base:</strong>
@@ -100,6 +106,7 @@
                                             <li>Sin cebollín</li>
                                         @endif
                                     </ul>
+                                    @endif
                                 </td>
 
                                 {{-- Subtotal --}}
@@ -162,6 +169,9 @@
                             </form>
                         </div>
 
+                        @if(isset($d['Bloques']))
+                            <x-menu-selection-summary :detail="$d" />
+                        @else
                         <ul class="text-sm text-gray-700 space-y-1 mb-2">
                             <li>
                                 <strong>Base:</strong>
@@ -182,6 +192,7 @@
                                 <li>Sin cebollín</li>
                             @endif
                         </ul>
+                        @endif
 
                         <div class="text-right font-bold">
                             ${{ number_format($line['total'], 0, ',', '.') }}

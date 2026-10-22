@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\OrderInvoiceService;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -14,6 +15,7 @@ class OrderController extends Controller
     public function index()
     {
         $orders = Order::latest()->paginate(20);
+
         return view('admin.orders.index', compact('orders'));
     }
 
@@ -24,7 +26,13 @@ class OrderController extends Controller
     {
         // Carga relaciones necesarias
         $order->load('items.producto');
+
         return view('admin.orders.show', compact('order'));
+    }
+
+    public function download(Order $order, OrderInvoiceService $invoices)
+    {
+        return $invoices->download($order);
     }
 
     /**

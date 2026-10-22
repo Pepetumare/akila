@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Producto;
 use App\Models\Categoria;
 use App\Models\Ingrediente;
+use App\Models\Producto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -28,6 +28,7 @@ class ProductoController extends Controller
             $producto->url_imagen = $producto->imagen && Storage::disk('public')->exists($producto->imagen)
                 ? Storage::disk('public')->url($producto->imagen)
                 : asset('img/no_disponible.png');
+
             return $producto;
         });
 
@@ -35,8 +36,8 @@ class ProductoController extends Controller
         // para filtros rápidos, cargamos todos los ingredientes
         $ingredientes = Ingrediente::orderBy('nombre')->get();
 
-        $wrappers   = $ingredientes->where('tipo', 'envoltura');
-        $proteins   = $ingredientes->where('tipo', 'proteina');
+        $wrappers = $ingredientes->where('tipo', 'envoltura');
+        $proteins = $ingredientes->where('tipo', 'proteina');
         $vegetables = $ingredientes->where('tipo', 'vegetal');
 
         return view('admin.productos.index', compact(
@@ -60,13 +61,12 @@ class ProductoController extends Controller
     //     return view('menu', compact('productos', 'categorias'));
     // }
 
-
     public function create()
     {
-        $categorias   = Categoria::orderBy('nombre')->pluck('nombre', 'id');
-        $wrappers     = Ingrediente::where('tipo', 'envoltura')->orderBy('nombre')->get();
-        $proteins     = Ingrediente::where('tipo', 'proteina')->orderBy('nombre')->get();
-        $vegetables   = Ingrediente::where('tipo', 'vegetal')->orderBy('nombre')->get();
+        $categorias = Categoria::orderBy('nombre')->pluck('nombre', 'id');
+        $wrappers = Ingrediente::where('tipo', 'envoltura')->orderBy('nombre')->get();
+        $proteins = Ingrediente::where('tipo', 'proteina')->orderBy('nombre')->get();
+        $vegetables = Ingrediente::where('tipo', 'vegetal')->orderBy('nombre')->get();
 
         return view('admin.productos.create', compact('categorias', 'wrappers', 'proteins', 'vegetables'));
     }
@@ -74,23 +74,23 @@ class ProductoController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'nombre'               => 'required|string',
-            'descripcion'          => 'nullable|string',
-            'precio'               => 'required|numeric|min:0',
-            'categoria_id'         => 'required|exists:categorias,id',
-            'imagen'               => 'nullable|image|max:2048',
-            'personalizable'       => 'required|in:0,1',
-            'unidades'             => 'required|integer|min:1',
-            'envolturas'           => 'required|array|min:1',
-            'envolturas.*'         => 'exists:ingredientes,id',
-            'Proteínas'            => 'nullable|array',
-            'Proteínas.*'          => 'exists:ingredientes,id',
-            'cantidad_proteina'    => 'nullable|array',
-            'cantidad_proteina.*'  => 'integer|min:1',
-            'vegetales'            => 'nullable|array',
-            'vegetales.*'          => 'exists:ingredientes,id',
-            'cantidad_vegetal'     => 'nullable|array',
-            'cantidad_vegetal.*'   => 'integer|min:1',
+            'nombre' => 'required|string',
+            'descripcion' => 'nullable|string',
+            'precio' => 'required|numeric|min:0',
+            'categoria_id' => 'required|exists:categorias,id',
+            'imagen' => 'nullable|image|max:2048',
+            'personalizable' => 'required|in:0,1',
+            'unidades' => 'required|integer|min:1',
+            'envolturas' => 'required|array|min:1',
+            'envolturas.*' => 'exists:ingredientes,id',
+            'Proteínas' => 'nullable|array',
+            'Proteínas.*' => 'exists:ingredientes,id',
+            'cantidad_proteina' => 'nullable|array',
+            'cantidad_proteina.*' => 'integer|min:1',
+            'vegetales' => 'nullable|array',
+            'vegetales.*' => 'exists:ingredientes,id',
+            'cantidad_vegetal' => 'nullable|array',
+            'cantidad_vegetal.*' => 'integer|min:1',
         ]);
 
         // Cast Boolean
@@ -126,13 +126,13 @@ class ProductoController extends Controller
 
         // Crear producto
         $producto = Producto::create([
-            'nombre'         => $data['nombre'],
-            'descripcion'    => $data['descripcion'] ?? '',
-            'precio'         => $data['precio'],
-            'categoria_id'   => $data['categoria_id'],
+            'nombre' => $data['nombre'],
+            'descripcion' => $data['descripcion'] ?? '',
+            'precio' => $data['precio'],
+            'categoria_id' => $data['categoria_id'],
             'personalizable' => $data['personalizable'],
-            'unidades'       => $data['unidades'],
-            'imagen'         => $data['imagen'] ?? null,
+            'unidades' => $data['unidades'],
+            'imagen' => $data['imagen'] ?? null,
         ]);
 
         // Sincronizar envoltura + Proteínas + vegetales
@@ -141,7 +141,6 @@ class ProductoController extends Controller
         foreach ($data['envolturas'] as $id) {
             $sync[$id] = ['cantidad_permitida' => 1];
         }
-
 
         foreach ($data['Proteínas'] ?? [] as $id) {
             $sync[$id] = ['cantidad_permitida' => $data['cantidad_proteina'][$id] ?? 1];
@@ -155,17 +154,16 @@ class ProductoController extends Controller
             $file = $request->file('imagen');
 
             // 👇 Depurar antes de guardar
-            logger('Nombre original: ' . $file->getClientOriginalName());
-            logger('Extensión: ' . $file->getClientOriginalExtension());
+            logger('Nombre original: '.$file->getClientOriginalName());
+            logger('Extensión: '.$file->getClientOriginalExtension());
 
             $path = $file->store('productos', 'public');
 
-            logger('Guardado en: ' . $path);
+            logger('Guardado en: '.$path);
 
             $data['imagen'] = $path;
         }
 
-        
         return redirect()
             ->route('admin.productos.index')
             ->with('success', 'Producto creado correctamente.');
@@ -173,10 +171,10 @@ class ProductoController extends Controller
 
     public function edit(Producto $producto)
     {
-        $categorias   = Categoria::orderBy('nombre')->pluck('nombre', 'id');
-        $wrappers     = Ingrediente::where('tipo', 'envoltura')->orderBy('nombre')->get();
-        $proteins     = Ingrediente::where('tipo', 'proteina')->orderBy('nombre')->get();
-        $vegetables   = Ingrediente::where('tipo', 'vegetal')->orderBy('nombre')->get();
+        $categorias = Categoria::orderBy('nombre')->pluck('nombre', 'id');
+        $wrappers = Ingrediente::where('tipo', 'envoltura')->orderBy('nombre')->get();
+        $proteins = Ingrediente::where('tipo', 'proteina')->orderBy('nombre')->get();
+        $vegetables = Ingrediente::where('tipo', 'vegetal')->orderBy('nombre')->get();
 
         return view('admin.productos.edit', compact('producto', 'categorias', 'wrappers', 'proteins', 'vegetables'));
     }
@@ -184,23 +182,23 @@ class ProductoController extends Controller
     public function update(Request $request, Producto $producto)
     {
         $data = $request->validate([
-            'nombre'               => 'required|string',
-            'descripcion'          => 'nullable|string',
-            'precio'               => 'required|numeric|min:0',
-            'categoria_id'         => 'required|exists:categorias,id',
-            'imagen'               => 'nullable|image|max:2048',
-            'personalizable'       => 'required|in:0,1',
-            'unidades'             => 'required|integer|min:1',
-            'envolturas'           => 'required|array|min:1',
-            'envolturas.*'         => 'exists:ingredientes,id',
-            'Proteínas'            => 'nullable|array',
-            'Proteínas.*'          => 'exists:ingredientes,id',
-            'cantidad_proteina'    => 'nullable|array',
-            'cantidad_proteina.*'  => 'integer|min:1',
-            'vegetales'            => 'nullable|array',
-            'vegetales.*'          => 'exists:ingredientes,id',
-            'cantidad_vegetal'     => 'nullable|array',
-            'cantidad_vegetal.*'   => 'integer|min:1',
+            'nombre' => 'required|string',
+            'descripcion' => 'nullable|string',
+            'precio' => 'required|numeric|min:0',
+            'categoria_id' => 'required|exists:categorias,id',
+            'imagen' => 'nullable|image|max:2048',
+            'personalizable' => 'required|in:0,1',
+            'unidades' => 'required|integer|min:1',
+            'envolturas' => 'required|array|min:1',
+            'envolturas.*' => 'exists:ingredientes,id',
+            'Proteínas' => 'nullable|array',
+            'Proteínas.*' => 'exists:ingredientes,id',
+            'cantidad_proteina' => 'nullable|array',
+            'cantidad_proteina.*' => 'integer|min:1',
+            'vegetales' => 'nullable|array',
+            'vegetales.*' => 'exists:ingredientes,id',
+            'cantidad_vegetal' => 'nullable|array',
+            'cantidad_vegetal.*' => 'integer|min:1',
         ]);
 
         $data['personalizable'] = (bool) $data['personalizable'];
@@ -235,13 +233,13 @@ class ProductoController extends Controller
 
         // Actualizar producto
         $producto->update([
-            'nombre'         => $data['nombre'],
-            'descripcion'    => $data['descripcion'] ?? '',
-            'precio'         => $data['precio'],
-            'categoria_id'   => $data['categoria_id'],
+            'nombre' => $data['nombre'],
+            'descripcion' => $data['descripcion'] ?? '',
+            'precio' => $data['precio'],
+            'categoria_id' => $data['categoria_id'],
             'personalizable' => $data['personalizable'],
-            'unidades'       => $data['unidades'],
-            'imagen'         => $data['imagen'] ?? $producto->imagen,
+            'unidades' => $data['unidades'],
+            'imagen' => $data['imagen'] ?? $producto->imagen,
         ]);
 
         // Sincronizar ingrediente-producto
@@ -266,10 +264,14 @@ class ProductoController extends Controller
 
     public function destroy(Producto $producto)
     {
-        if ($producto->imagen) {
-            Storage::disk('public')->delete($producto->imagen);
+        if ($producto->orderItems()->exists() || $producto->promocion()->exists()) {
+            return back()->withErrors('Este producto tiene referencias históricas o una promoción vinculada. Consérvalo y desactívalo.');
         }
+        $image = $producto->imagen;
         $producto->delete();
+        if ($image) {
+            Storage::disk('public')->delete($image);
+        }
 
         return redirect()
             ->route('admin.productos.index')
