@@ -5,71 +5,42 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Categoria;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CategoriaController extends Controller
 {
     public function index(Request $request)
     {
-        // Obtenemos el término de búsqueda (si hay)
-        $q = $request->input('q');
-
-        // Construimos la consulta
-        $query = Categoria::query();
-        if ($q) {
-            $query->where('nombre', 'like', "%{$q}%");
-        }
-
-        // Paginamos en lugar de get()
-        $categorias = $query
-            ->orderBy('nombre')
-            ->paginate(10)            // 10 por página, ajústalo a tu gusto
-            ->appends(['q' => $q]);   // mantiene el parámetro q en los links
-
+        $categorias = Categoria::withCount('productos')->withCount(['productos as activos_count' => fn ($q) => $q->where('activo', true)])->orderBy('orden')->paginate(15);
         return view('admin.categorias.index', compact('categorias'));
     }
 
-    public function create()
+    public function create() { return view('admin.categorias.edit', ['categoria' => new Categoria]); }
+
+    public function edit(Categoria $categoria) { return view('admin.categorias.edit', compact('categoria')); }
+
+    private function data(Request $request, ?Categoria $category = null): array
     {
-        return view('admin.categorias.create');
+        return $request->validate(['nombre' => ['required', 'string', 'max:255', Rule::unique('categorias')->ignore($category?->id)],
+            'activo' => 'sometimes|boolean', 'orden' => 'sometimes|integer|min:0|max:100000']);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'nombre' => 'required|string|unique:categorias,nombre',
-        ]);
-
-        Categoria::create($data);
-
-        return redirect()->route('admin.categorias.index')
-            ->with('success', 'Categoría creada.');
-    }
-
-    public function edit(Categoria $categoria)
-    {
-        return view('admin.categorias.edit', compact('categoria'));
+        Categoria::create($this->data($request));
+        return redirect()->route('admin.categorias.index')->with('success', 'Categoría creada.');
     }
 
     public function update(Request $request, Categoria $categoria)
     {
-        $data = $request->validate([
-            'nombre' => 'required|string|unique:categorias,nombre,'.$categoria->id,
-        ]);
-
-        $categoria->update($data);
-
-        return redirect()->route('admin.categorias.index')
-            ->with('success', 'Categoría actualizada.');
+        $categoria->update($this->data($request, $categoria));
+        return redirect()->route('admin.categorias.index')->with('success', 'Categoría actualizada.');
     }
 
     public function destroy(Categoria $categoria)
     {
-        if ($categoria->productos()->exists()) {
-            return back()->withErrors('La categoría contiene productos. Consérvala y desactívala.');
-        }
+        if ($categoria->productos()->exists()) { return back()->withErrors('La categoría contiene productos. Consérvala y desactívala.'); }
         $categoria->delete();
-
-        return redirect()->route('admin.categorias.index')
-            ->with('success', 'Categoría eliminada.');
+        return back()->with('success', 'Categoría eliminada.');
     }
 }

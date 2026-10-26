@@ -12,7 +12,7 @@
 <link rel="icon" href="{{ asset('img/logo/logo-icon.png') }}" type="image/png">
 @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/custom.css'])
 </head>
-<body class="akila-store flex min-h-screen flex-col bg-[var(--akila-cream)] font-sans text-[var(--akila-gray-900)] antialiased">
+<body @class(['akila-store flex min-h-screen flex-col bg-[var(--akila-cream)] font-sans text-[var(--akila-gray-900)] antialiased', 'akila-menu-page' => request()->routeIs('menu'), 'akila-cart-page' => request()->routeIs('cart.index')])>
 <a href="#main-content" class="akila-skip-link">Saltar al contenido</a>
 @php($cartCount = collect(session('cart', []))->sum('unidades'))
 <x-store.header :count="$cartCount" />

@@ -1,22 +1,6 @@
 @extends('admin.layout')
-
-@section('title', 'Editar Ingrediente')
-@section('page-title', 'Editar Ingrediente')
-
+@section('page-title','Ingrediente')
 @section('content')
-  <form action="{{ route('admin.ingredientes.update', $ingrediente) }}" method="POST">
-    @csrf
-    @method('PUT')
-    {{-- PASAMOS $tipos (y también $ingrediente) al partial --}}
-    @include('admin.ingredientes._form', [
-      'ingrediente' => $ingrediente,
-      'tipos'       => $tipos,
-    ])
-    <div class="mt-4">
-      <button type="submit"
-              class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-        Actualizar
-      </button>
-    </div>
-  </form>
+<div class="page-intro"><div><a href="{{ route('admin.ingredientes.index') }}">← Ingredientes</a><h2>{{ $ingrediente->nombre ?: 'Nuevo ingrediente' }}</h2></div><span class="badge {{ $ingrediente->is_available ? 'green' : 'red' }}">{{ $ingrediente->is_available ? 'Disponible' : 'Agotado' }}</span></div>
+<div class="editor-layout"><form class="card form-card" method="post" action="{{ $ingrediente->exists ? route('admin.ingredientes.update',$ingrediente) : route('admin.ingredientes.store') }}">@csrf @if($ingrediente->exists) @method('PUT') @endif<h2>Información del ingrediente</h2><div class="form-grid"><label class="wide">Nombre<input name="nombre" required value="{{ old('nombre',$ingrediente->nombre) }}"></label><label>Tipo<select name="tipo">@foreach($tipos as $tipo)<option value="{{ $tipo }}" @selected(old('tipo',$ingrediente->tipo)===$tipo)>{{ ucfirst($tipo) }}</option>@endforeach</select></label><label>Costo registrado<input name="costo" type="number" min="0" step="0.01" value="{{ old('costo',$ingrediente->costo) }}"></label></div><p class="muted">El costo no es el recargo comercial ni representa stock. Los recargos se consultan en Personalización.</p><div class="form-footer"><a class="btn" href="{{ route('admin.ingredientes.index') }}">Volver</a><button class="btn primary">Guardar ingrediente</button></div></form><aside class="card"><h2>Impacto del ingrediente</h2><p><strong>{{ $affected->count() }} productos</strong> · {{ $ingrediente->opciones_count ?? 0 }} opciones</p><p class="notice warning">Agotar impide nuevas selecciones. Los productos de composición fija siguen activos hasta que decidas retirarlos. Los pedidos históricos conservan su composición.</p>@foreach($affected as $product)<a class="impact-row" href="{{ route('admin.productos.edit',$product) }}"><strong>{{ $product->nombre }}</strong><span class="badge {{ $product->activo ? 'green' : 'neutral' }}">{{ $product->activo ? 'Activo' : 'Inactivo' }}</span></a>@endforeach</aside></div>
 @endsection

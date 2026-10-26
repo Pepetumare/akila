@@ -6,13 +6,14 @@
     @php
         // Inicio uses Route::view; these catalog reads stay local to the Home.
         $homeCategories = \App\Models\Categoria::query()
-            ->addSelect(['cover_image' => \App\Models\Producto::query()
+            ->where('activo', true)
+            ->addSelect(['cover_image' => \App\Models\Producto::disponible()
                 ->select('imagen')->whereColumn('categoria_id', 'categorias.id')
                 ->whereNotNull('imagen')->where('imagen', '!=', '')->orderBy('id')->limit(1)])
             ->orderBy('nombre')->get();
         // There is no featured/popularity field: use a stable catalog selection.
-        $homeProducts = \App\Models\Producto::with('categoria')->orderBy('nombre')->orderBy('id')->limit(4)->get();
-        $customizableProduct = \App\Models\Producto::with('categoria')->where('personalizable', true)->orderBy('nombre')->first();
+        $homeProducts = \App\Models\Producto::disponible()->with('categoria')->orderBy('nombre')->orderBy('id')->limit(4)->get();
+        $customizableProduct = \App\Models\Producto::disponible()->with('categoria')->where('personalizable', true)->orderBy('nombre')->first();
         $customizationUrl = $customizableProduct?->categoria?->slug
             ? route('menu', ['filter' => $customizableProduct->categoria->slug]) : route('menu');
         $benefits = [

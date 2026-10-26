@@ -33,6 +33,12 @@ class ReglaPromocion extends Model
             if ($rule->tipo === TipoReglaPromocion::Excluir && (float) $rule->valor !== 0.0) {
                 throw ValidationException::withMessages(['valor' => 'Una exclusión debe tener valor cero.']);
             }
+            if ($rule->tipo === TipoReglaPromocion::Incompatible) {
+                Validator::make($rule->metadata ?? [], [
+                    'option_ids' => 'required|array|list|min:1|max:100',
+                    'option_ids.*' => 'required|integer|distinct|min:1',
+                ])->validate();
+            }
         });
     }
 

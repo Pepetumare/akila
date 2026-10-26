@@ -12,7 +12,6 @@ use App\Services\ProductPricingService;
 use Database\Seeders\SushiAkilaMenuBatch01Seeder;
 use Database\Seeders\SushiAkilaMenuBatch02Seeder;
 use Database\Seeders\SushiAkilaMenuBatch03Seeder;
-use Database\Seeders\SushiAkilaMenuSeeder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -82,21 +81,21 @@ test('batch03 imports exactly eight new products and confirms prior fifty withou
     expect(Producto::whereIn('slug', ['nikkei', 'akilaburger', 'gohan', 'arrollados'])->count())->toBe(0);
 });
 
-test('batch03 principal and standalone reruns preserve every identity value and source priority', function () {
-    $this->seed(SushiAkilaMenuSeeder::class);
+test('batch03 scoped composition and standalone reruns preserve every identity value and source priority', function () {
+    $this->seed([SushiAkilaMenuBatch01Seeder::class, SushiAkilaMenuBatch02Seeder::class, SushiAkilaMenuBatch03Seeder::class]);
     $state = batch03State();
     $fifty = Producto::where('slug', '50-piezas-a-eleccion')->sole();
     $this->travel(2)->minutes();
     $this->seed(SushiAkilaMenuBatch03Seeder::class);
     expect(batch03State())->toBe($state);
-    $this->seed(SushiAkilaMenuSeeder::class);
+    $this->seed([SushiAkilaMenuBatch01Seeder::class, SushiAkilaMenuBatch02Seeder::class, SushiAkilaMenuBatch03Seeder::class]);
     expect(batch03State())->toBe($state)->and($fifty->fresh()->id)->toBe($fifty->id)
         ->and($fifty->fresh()->bloques->first()->metadata['foto'])->toBe(30)
         ->and(MenuMoney::cents(Producto::where('slug', 'promo-hot')->sole()->precio))->toBe(1999000);
 });
 
 test('batch03 hand rolls store units without artificial pieces and product groups need no blocks', function () {
-    $this->seed(SushiAkilaMenuSeeder::class);
+    $this->seed([SushiAkilaMenuBatch01Seeder::class, SushiAkilaMenuBatch02Seeder::class, SushiAkilaMenuBatch03Seeder::class]);
     foreach (['3-hand-rolls' => 3, '4-hand-rolls' => 4, '5-hand-rolls' => 5, '4-hand-rolls-pollo-palta' => 4] as $slug => $units) {
         $product = Producto::where('slug', $slug)->sole();
         expect($product->unidad_tipo)->toBe(UnidadComercial::HandRoll)->and($product->bloques)->toHaveCount($units)
@@ -117,7 +116,7 @@ test('batch03 hand rolls store units without artificial pieces and product group
 });
 
 test('batch03 commercial individual selections use exact server prices', function (string $slug, array $choices, int $price) {
-    $this->seed(SushiAkilaMenuSeeder::class);
+    $this->seed([SushiAkilaMenuBatch01Seeder::class, SushiAkilaMenuBatch02Seeder::class, SushiAkilaMenuBatch03Seeder::class]);
     $payload = batch03Payload($slug, $choices) + ['price' => 1, 'total' => 1, 'extra_price' => -1000, 'discount' => 99999];
     $this->postJson(route('cart.quote'), $payload)->assertOk()->assertJsonPath('precio_unit', $price);
     $this->postJson(route('cart.add'), $payload)->assertOk();
@@ -131,7 +130,7 @@ test('batch03 commercial individual selections use exact server prices', functio
 ]);
 
 test('batch03 commercial individuals reject missing excessive wrong type and foreign options', function (string $slug, array $groups, array $choices) {
-    $this->seed(SushiAkilaMenuSeeder::class);
+    $this->seed([SushiAkilaMenuBatch01Seeder::class, SushiAkilaMenuBatch02Seeder::class, SushiAkilaMenuBatch03Seeder::class]);
     $product = Producto::where('slug', $slug)->sole();
     $payload = ['product_id' => $product->id, 'unidades' => 1,
         'option_ids' => array_map(fn ($group, $choice) => batch03Option($group, $choice), $groups, $choices)];
@@ -151,7 +150,7 @@ test('batch03 commercial individuals reject missing excessive wrong type and for
 ]);
 
 test('batch03 commercial promotions validate all fillings including optional ingredients', function (string $slug, array $choices, bool $valid) {
-    $this->seed(SushiAkilaMenuSeeder::class);
+    $this->seed([SushiAkilaMenuBatch01Seeder::class, SushiAkilaMenuBatch02Seeder::class, SushiAkilaMenuBatch03Seeder::class]);
     $response = $this->postJson(route('cart.quote'), batch03Payload($slug, $choices));
     $valid ? $response->assertOk() : $response->assertUnprocessable();
     if ($valid) {
@@ -171,7 +170,7 @@ test('batch03 commercial promotions validate all fillings including optional ing
 ]);
 
 test('batch03 second ingredient is scoped per unit priced exactly and protected from tampering', function () {
-    $this->seed(SushiAkilaMenuSeeder::class);
+    $this->seed([SushiAkilaMenuBatch01Seeder::class, SushiAkilaMenuBatch02Seeder::class, SushiAkilaMenuBatch03Seeder::class]);
     $payload = batch03Payload('5-hand-rolls', ['pollo', 'pollo', 'camaron', 'camaron', 'palta']);
     $extra = batch03Option('segundo-ingrediente', 'champinon');
     $this->postJson(route('cart.quote'), $payload)->assertOk()->assertJsonPath('precio_unit', 18000);
@@ -200,7 +199,7 @@ test('batch03 second ingredient is scoped per unit priced exactly and protected 
 });
 
 test('batch03 fixed products quote automatically and all historical details keep commercial units', function () {
-    $this->seed(SushiAkilaMenuSeeder::class);
+    $this->seed([SushiAkilaMenuBatch01Seeder::class, SushiAkilaMenuBatch02Seeder::class, SushiAkilaMenuBatch03Seeder::class]);
     foreach (['las-mismas-de-siempre' => [27900, 8], '4-hand-rolls-pollo-palta' => [18000, 4]] as $slug => [$price, $blocks]) {
         $product = Producto::where('slug', $slug)->sole();
         $quote = app(ProductPricingService::class)->quote($product, []);
@@ -220,7 +219,7 @@ test('batch03 fixed products quote automatically and all historical details keep
 });
 
 test('batch03 cart separates configurations checkout preserves snapshots and current catalog cannot alter history', function () {
-    $this->seed(SushiAkilaMenuSeeder::class);
+    $this->seed([SushiAkilaMenuBatch01Seeder::class, SushiAkilaMenuBatch02Seeder::class, SushiAkilaMenuBatch03Seeder::class]);
     $a = batch03Payload('3-hand-rolls', ['pollo', 'kanikama', 'palta']);
     $b = batch03Payload('3-hand-rolls', ['camaron', 'champinon', 'pollo']);
     $this->postJson(route('cart.add'), $a)->assertOk();
@@ -243,7 +242,7 @@ test('batch03 cart separates configurations checkout preserves snapshots and cur
 });
 
 test('batch03 structural validation rejects false piece quantities and unsafe schema rollback', function () {
-    $this->seed(SushiAkilaMenuSeeder::class);
+    $this->seed([SushiAkilaMenuBatch01Seeder::class, SushiAkilaMenuBatch02Seeder::class, SushiAkilaMenuBatch03Seeder::class]);
     $product = Producto::where('slug', '3-hand-rolls')->sole();
     expect(fn () => $product->bloques()->create(['nombre' => 'Inválido', 'unidad_tipo' => 'hand_roll', 'cantidad_piezas' => 10, 'cantidad_unidades' => 1, 'orden' => 99]))->toThrow(ValidationException::class);
     $migration = require database_path('migrations/2026_10_22_000100_add_commercial_units_to_catalog.php');

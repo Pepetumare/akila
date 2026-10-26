@@ -1,76 +1,17 @@
 @extends('admin.layout')
-
-@section('title', 'Dashboard')
-@section('page-title', 'Panel de Control')
-
+@section('page-title','Resumen de operación')
 @section('content')
-<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
-  {{-- Tarjetas resumen --}}
-  <div class="bg-white p-6 rounded shadow">
-    <h3 class="text-sm font-medium text-gray-500">Pedidos Totales</h3>
-    <p class="mt-2 text-3xl font-bold">{{ $totalOrders }}</p>
-  </div>
-  <div class="bg-white p-6 rounded shadow">
-    <h3 class="text-sm font-medium text-gray-500">Ventas Hoy</h3>
-    <p class="mt-2 text-3xl font-bold">${{ number_format($salesToday,0,',','.') }}</p>
-  </div>
-  <div class="bg-white p-6 rounded shadow">
-    <h3 class="text-sm font-medium text-gray-500">Productos</h3>
-    <p class="mt-2 text-3xl font-bold">{{ $totalProducts }}</p>
-  </div>
-  <div class="bg-white p-6 rounded shadow">
-    <h3 class="text-sm font-medium text-gray-500">Ingredientes</h3>
-    <p class="mt-2 text-3xl font-bold">{{ $totalIngredients }}</p>
-  </div>
-  <div class="bg-white p-6 rounded shadow md:col-span-2 lg:col-span-1">
-    <h3 class="text-sm font-medium text-gray-500">Categorías</h3>
-    <p class="mt-2 text-3xl font-bold">{{ $totalCategories }}</p>
-  </div>
+<div class="page-intro"><div><h2>Todo listo para una buena jornada.</h2><p>Tu operación en tiempo real · {{ \App\Services\AdminClock::now()->locale('es')->translatedFormat('l d \d\e F') }}</p></div><a class="btn primary" href="{{ route('admin.kitchen') }}"><x-admin.icon name="kitchen"/>Ver cocina</a></div>
+<div class="kpi-grid">
+@foreach([['chart','Ventas hoy','$'.number_format($sales,0,',','.'),'Solo pagos aprobados'],['orders','Pedidos hoy',$ordersToday,$paidCount.' con pago aprobado'],['portion','Ticket promedio','$'.number_format($paidCount ? $sales/$paidCount : 0,0,',','.'),'Pedidos pagados de hoy'],['kitchen','Piezas vendidas',$sold['pieces'],'Snapshots compatibles: '.$sold['covered']]] as [$icon,$label,$value,$note])
+<article class="kpi card"><span class="kpi-icon"><x-admin.icon :name="$icon"/></span><p>{{ $label }}</p><strong>{{ $value }}</strong><small>{{ $note }}</small></article>@endforeach
 </div>
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-  {{-- Gráfico de Pedidos por Estado --}}
-  <div class="bg-white p-6 rounded shadow">
-    <h3 class="text-lg font-semibold mb-4">Pedidos por Estado</h3>
-    <canvas id="statusChart"></canvas>
-  </div>
-
-  {{-- Tabla de Top Productos --}}
-  <div class="bg-white p-6 rounded shadow">
-    <h3 class="text-lg font-semibold mb-4">Top 5 Productos (Ingresos)</h3>
-    <ul class="space-y-2">
-      @foreach($topProducts as $item)
-        <li class="flex justify-between">
-          <span>{{ $item->producto->nombre }}</span>
-          <span>${{ number_format($item->revenue,0,',','.') }}</span>
-        </li>
-      @endforeach
-    </ul>
-  </div>
+<div class="dashboard-operation">
+<section class="card kitchen-load"><div class="section-heading"><h2>Carga de cocina</h2><span class="badge {{ $level==='Alta' ? 'red' : ($level==='Media' ? 'orange' : 'green') }}">{{ $level }}</span></div><strong class="large-number">{{ $load['pieces'] }} <small>piezas pendientes</small></strong><div class="load-bar"><i style="width:{{ min(100,$load['pieces']/max(1,$operation['load_high'])*100) }}%"></i></div><div class="load-facts"><span><b>{{ $load['fried'] }}</b> fritas conocidas</span><span><b>{{ $load['cold'] }}</b> frías conocidas</span><span><b>{{ $load['hand_rolls'] }}</b> Hand Rolls</span><span><b>{{ $load['units'] }}</b> otras unidades</span></div><p class="muted">{{ $load['uncovered'] }} líneas sin cobertura histórica · No se infieren preparaciones.</p><div class="estimate"><x-admin.icon name="clock"/><span>Tiempo estimado actual <strong>{{ $operation['estimate_min'] }}–{{ $operation['estimate_max'] }} min</strong></span><a href="{{ route('admin.settings') }}">Ajustar</a></div></section>
+<section class="card"><div class="section-heading"><h2>Estado del local</h2><a href="{{ route('admin.settings') }}">Gestionar</a></div>@foreach(['is_open'=>'Local abierto','online_orders'=>'Pedidos online','delivery_enabled'=>'Delivery'] as $key=>$label)<div class="operation-line"><span>{{ $label }}</span><span class="badge {{ $operation[$key] ? 'green' : 'red' }}">{{ $operation[$key] ? 'ON' : 'OFF' }}</span></div>@endforeach<p class="muted">Configuración operativa manual. Los controles públicos conservan su flujo actual.</p></section>
+<section class="card" id="alerts"><div class="section-heading"><h2>Alertas</h2><x-admin.icon name="bell"/></div>@if($overdue)<p class="alert-row danger">{{ $overdue }} pedidos preparando fuera del objetivo.</p>@endif @if($pendingPayments)<p class="alert-row warning">{{ $pendingPayments }} pedidos activos con pago sin aprobar.</p>@endif @if($unavailable)<p class="alert-row warning">{{ $unavailable }} ingredientes agotados.</p>@endif @if($active->where('status','listo')->count())<p class="alert-row">{{ $active->where('status','listo')->count() }} pedidos listos para entregar.</p>@endif @if(!$overdue && !$pendingPayments && !$unavailable)<p class="empty-small">Sin alertas críticas.</p>@endif</section>
 </div>
-
-{{-- Scripts de Chart.js --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  // Datos para pedidos por estado
-  const statusLabels = @json(array_keys($ordersByStatus->toArray()));
-  const statusData   = @json(array_values($ordersByStatus->toArray()));
-
-  new Chart(document.getElementById('statusChart'), {
-    type: 'doughnut',
-    data: {
-      labels: statusLabels,
-      datasets: [{
-        data: statusData,
-        backgroundColor: ['#F59E0B','#10B981','#EF4444','#3B82F6']
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'bottom' }
-      }
-    }
-  });
-</script>
+<div class="dashboard-bottom"><section class="card"><div class="section-heading"><h2>Pedidos en cocina <span class="count">{{ $active->count() }}</span></h2><a href="{{ route('admin.orders.index') }}">Ver todos →</a></div><div class="table-scroll"><table><thead><tr><th>Pedido</th><th>Hora</th><th>Tipo</th><th>Estado</th><th>Total</th><th></th></tr></thead><tbody>@forelse($active->take(8) as $order)<tr><td><a href="{{ route('admin.orders.show',$order) }}">#{{ $order->id }}</a><small>{{ $order->cliente_nombre }}</small></td><td>{{ $order->created_at->copy()->setTimezone(config('admin.timezone'))->format('H:i') }}</td><td>{{ $order->metodo_entrega==='delivery' ? 'Delivery' : 'Retiro' }}</td><td><x-admin.badge :state="$order->status"/></td><td>${{ number_format($order->total,0,',','.') }}</td><td><a class="btn small" href="{{ route('admin.orders.show',$order) }}">Abrir</a></td></tr>@empty<tr><td colspan="6" class="empty">No hay pedidos en cocina.</td></tr>@endforelse</tbody></table></div></section>
+<section class="card"><div class="section-heading"><h2>Ventas por hora</h2><span class="muted">Hoy · pagos aprobados</span></div><div class="bar-chart">@for($h=10;$h<=23;$h++)@php($amount=$chart->get(str_pad($h,2,'0',STR_PAD_LEFT),0))<div title="{{ $h }} h · ${{ number_format($amount,0,',','.') }}"><i style="height:{{ $amount ? max(3,$amount/max(1,$chart->max())*100) : 0 }}%"></i><span>{{ $h }}</span></div>@endfor</div><p class="muted">Sin comparaciones ficticias con jornadas anteriores.</p></section></div>
+<div class="quick-actions"><span>{{ $products }} productos activos</span><span>{{ $ingredients }} ingredientes</span><a class="btn" href="{{ route('admin.productos.create') }}">+ Nuevo producto</a><a class="btn" href="{{ route('admin.ingredientes.index') }}">Gestionar disponibilidad</a></div>
 @endsection

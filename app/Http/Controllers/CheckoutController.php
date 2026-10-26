@@ -58,7 +58,7 @@ class CheckoutController extends Controller
             'cliente_comentarios' => 'nullable|string|max:2000',
             'metodo_entrega' => 'required|in:pickup,delivery',
             'zona_delivery' => 'nullable|string|in:dentro,fuera|required_if:metodo_entrega,delivery',
-            'kms_fuera' => 'nullable|integer|min:1|max:100|required_if:zona_delivery,fuera',
+            'kms_fuera' => 'nullable|integer|min:1|max:100',
         ]);
 
         $cart = $request->session()->get('cart', []);
@@ -80,12 +80,11 @@ class CheckoutController extends Controller
         $subtotal = collect($cart)->sum(fn ($item) => (float) ($item['total'] ?? 0));
         $deliveryCost = $this->calculateDeliveryCost(
             $data['metodo_entrega'],
-            $data['zona_delivery'] ?? null,
-            $data['kms_fuera'] ?? null
+            $data['zona_delivery'] ?? null
         );
         $total = $subtotal + $deliveryCost;
 
-        $kmsFuera = ($data['zona_delivery'] ?? null) === 'fuera'
+        $kmsFuera = $data['metodo_entrega'] === 'delivery' && ($data['zona_delivery'] ?? null) === 'fuera' && isset($data['kms_fuera'])
             ? (int) $data['kms_fuera']
             : null;
 
@@ -164,21 +163,19 @@ class CheckoutController extends Controller
         }
     }
 
-    private function calculateDeliveryCost(string $method, ?string $zone, $kms): float
+    private function calculateDeliveryCost(string $method, ?string $zone): float
     {
         if ($method !== 'delivery') {
             return 0.0;
         }
 
-        $baseCost = 2500;
-
         if ($zone === 'fuera') {
-            $distance = max(1, (int) $kms);
-
-            return $baseCost + ($distance * 500);
+            throw ValidationException::withMessages([
+                'zona_delivery' => 'El delivery fuera de San José requiere cotización manual. Coordina la entrega antes de pagar.',
+            ]);
         }
 
-        return $baseCost;
+        return (float) config('delivery.local_price');
     }
 
     /* =========================================================

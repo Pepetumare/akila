@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\TipoProducto;
 use App\Enums\UnidadComercial;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,9 +37,10 @@ class Producto extends Model
 
     protected $guarded = [];
 
-    protected $attributes = ['tipo' => 'simple', 'activo' => true, 'orden' => 0, 'unidad_tipo' => 'pieza'];
+    protected $attributes = ['tipo' => 'simple', 'activo' => true, 'orden' => 0, 'unidad_tipo' => 'pieza', 'descripcion' => ''];
 
     protected $casts = [
+        'catalog_policy' => 'array',
         'personalizable' => 'boolean',
         'tipo' => TipoProducto::class,
         'activo' => 'boolean',
@@ -83,6 +85,11 @@ class Producto extends Model
     }
 
     // Relación con Categoría
+    public function scopeDisponible(Builder $query): Builder
+    {
+        return $query->where('productos.activo', true)->whereHas('categoria', fn ($category) => $category->where('activo', true));
+    }
+
     public function categoria(): BelongsTo
     {
         return $this->belongsTo(Categoria::class);

@@ -1,0 +1,2 @@
+@php([$minimum,$maximum]=$group->limites($group->pivot))
+<div class="group-panel"><div class="section-heading"><strong>{{ $group->nombre }}</strong><span class="badge neutral">{{ $minimum }}–{{ $maximum }} elecciones</span></div><div class="ingredient-chips">@foreach($group->opciones as $option)<span class="option-preview {{ $option->activo ? '' : 'unavailable' }}"><x-admin.icon name="check"/>{{ $option->nombre }}<small>{{ $option->recargo > 0 ? '+$'.number_format($option->recargo,0,',','.') : 'Incluido' }}</small></span>@endforeach</div></div>

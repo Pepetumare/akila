@@ -1,0 +1,8 @@
+@extends('admin.layout')
+@section('page-title','Personalización')
+@section('content')
+<div class="page-intro"><div><h2>Opciones y reglas de tu carta.</h2><p>Una fuente comercial compartida, con asignaciones por producto.</p></div></div>
+<div class="notice info">Consulta administrativa. La edición global de grupos y reglas se reserva para una fase con validación completa de impacto. No se habilitan extras automáticamente.</div>
+<div class="editor-tabs"><a href="#groups">Grupos de opciones</a><a href="#rules">Reglas</a><a href="#ingredientes-extras">Extras</a><a href="#salsas-adicionales">Salsas</a></div>
+<div class="personalization-grid" id="groups">@foreach($groups as $group)<section class="card" id="{{ $group->slug }}"><div class="section-heading"><h2>{{ $group->nombre }}</h2><span class="badge neutral">{{ $group->min_selections }}–{{ $group->max_selections }}</span></div><p class="muted">{{ $group->productos_count }} productos · {{ $group->bloques_count }} bloques · {{ $group->tipo_seleccion==='single' ? 'Selección única' : 'Selección múltiple' }}</p>@foreach($group->opciones as $option)<div class="operation-line"><span>{{ $option->nombre }}</span><strong>{{ $option->recargo > 0 ? '+$'.number_format($option->recargo,0,',','.') : 'Incluido' }}</strong></div>@endforeach @if($group->opciones->isEmpty())<p class="notice warning">Pendiente de confirmación; sin opciones asignadas.</p>@endif</section>@endforeach</div><section class="card" id="rules"><h2>Reglas activas</h2>@foreach($rules as $rule)<p>{{ str_replace('_',' ',$rule->tipo->value) }} <strong>{{ $rule->total }}</strong></p>@endforeach<p class="muted">Detalle por sujeto y condición en cada editor de producto.</p></section>
+@endsection

@@ -1,40 +1,20 @@
-{{-- resources/views/admin/productos/edit.blade.php --}}
 @extends('admin.layout')
-
-@section('title', 'Editar Producto')
-@section('page-title', 'Editar Producto: ' . $producto->nombre)
-
+@section('page-title', $producto->exists ? 'Editar producto' : 'Nuevo producto')
 @section('content')
-    <div class="container mx-auto p-6 max-w-lg">
-        @if ($errors->any())
-            <div class="mb-4 p-4 bg-red-100 text-red-800 rounded">
-                <ul class="list-disc ml-5">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <form action="{{ route('admin.productos.update', $producto) }}" method="POST" enctype="multipart/form-data">
-            @csrf
-            @method('PUT')
-            {{-- FORM PARTIAL --}}
-            @include('admin.productos._form', [
-                'categorias' => $categorias,
-                'wrappers' => $wrappers,
-                'proteins' => $proteins,
-                'vegetables' => $vegetables,
-            ])
-
-
-            <div class="mt-4 flex justify-end">
-                <a href="{{ route('admin.productos.index') }}"
-                    class="mr-2 px-4 py-2 border rounded hover:bg-gray-100">Cancelar</a>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                    Actualizar
-                </button>
-            </div>
-        </form>
-    </div>
+<div class="page-intro"><div><a href="{{ route('admin.productos.index') }}">← Productos</a><h2>{{ $producto->nombre ?: 'Nuevo producto' }}</h2></div><span class="badge {{ $producto->activo ? 'green' : 'neutral' }}">{{ $producto->activo ? 'Activo' : 'Inactivo / borrador' }}</span></div>
+@if($producto->ingredientes->contains(fn($i)=>filled(data_get($i->pivot->metadata,'pendiente'))))<div class="notice warning">Composición pendiente de confirmar. Este producto permanece inactivo.</div>@endif
+<div data-editor>
+<nav class="editor-tabs" role="tablist" aria-label="Editor de producto">@foreach(['general'=>'General','composition'=>'Composición','personalization'=>'Personalización','rules'=>'Reglas','image'=>'Imagen','availability'=>'Disponibilidad','history'=>'Historial'] as $tab=>$label)<button type="button" role="tab" data-editor-tab="{{ $tab }}" id="tab-{{ $tab }}" aria-controls="panel-{{ $tab }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}" tabindex="{{ $loop->first ? '0' : '-1' }}">{{ $label }}</button>@endforeach</nav>
+<div class="editor-layout"><div>
+<form id="product-general" class="card form-card" method="post" enctype="multipart/form-data" action="{{ $producto->exists ? route('admin.productos.update',$producto) : route('admin.productos.store') }}">@csrf @if($producto->exists) @method('PUT') @endif
+<section data-editor-panel="general" id="panel-general" role="tabpanel" aria-labelledby="tab-general"><div class="section-heading"><h2>Información general</h2><span class="muted">Identidad comercial</span></div>
+<div class="form-grid"><label class="wide">Nombre<input name="nombre" value="{{ old('nombre',$producto->nombre) }}" required maxlength="255"></label><label>Slug<input name="slug" value="{{ old('slug',$producto->slug) }}" @if($producto->exists) required @endif placeholder="Se genera al crear"></label><label>Categoría<select name="categoria_id" required>@foreach($categorias as $id=>$nombre)<option value="{{ $id }}" @selected(old('categoria_id',$producto->categoria_id)==$id)>{{ $nombre }}</option>@endforeach</select></label><label>Precio CLP<input name="precio" type="number" step="0.01" min="0.01" max="999999.99" value="{{ old('precio',$producto->precio) }}" required></label><label>Orden en carta<input name="orden" type="number" min="0" value="{{ old('orden',$producto->orden ?? 0) }}"></label><label>Cantidad incluida<input name="unidades" type="number" min="1" value="{{ old('unidades',$producto->unidades) }}" @readonly($producto->bloques->isNotEmpty())></label><label>Unidad comercial<select name="unidad_tipo">@foreach(\App\Enums\UnidadComercial::cases() as $unit)<option value="{{ $unit->value }}" @selected(old('unidad_tipo',$producto->unidad_tipo->value)===$unit->value)>{{ $unit->label(2) }}</option>@endforeach</select></label><label>Tipo comercial<select name="tipo">@foreach(\App\Enums\TipoProducto::cases() as $type)<option value="{{ $type->value }}" @selected(old('tipo',$producto->tipo->value)===$type->value)>{{ ucfirst($type->value) }}</option>@endforeach</select></label><label>Configuración<input value="{{ $producto->personalizable ? ($producto->bloques->count() ? 'Personalizable por bloques' : 'Personalizable a nivel producto') : 'Fijo' }}" readonly></label><label class="wide">Descripción<textarea name="descripcion" rows="4" maxlength="10000">{{ old('descripcion',$producto->descripcion) }}</textarea></label></div></section>
+<section data-editor-panel="image" id="panel-image" role="tabpanel" aria-labelledby="tab-image" hidden><h2>Imagen del producto</h2><p class="muted">JPG, PNG o WebP · hasta 4 MB. No se cargan imágenes de las referencias.</p><label>Seleccionar imagen<input type="file" name="imagen" accept="image/png,image/jpeg,image/webp"></label></section>
+<section data-editor-panel="availability" id="panel-availability" role="tabpanel" aria-labelledby="tab-availability" hidden><h2>Disponibilidad</h2><p>Retira el producto de la carta sin borrar pedidos ni configuración.</p><input type="hidden" name="activo" value="0"><label class="check-label"><input type="checkbox" name="activo" value="1" @checked(old('activo',$producto->activo))>Producto activo</label><p class="muted">Los borradores nuevos se crean inactivos. Los productos pendientes de composición no se pueden activar.</p></section>
+<div class="form-footer"><a class="btn" href="{{ route('admin.productos.index') }}">Volver</a><button class="btn primary" type="submit">Guardar producto</button></div></form>
+<section class="card form-card" data-editor-panel="composition" id="panel-composition" role="tabpanel" aria-labelledby="tab-composition" hidden><h2>Composición confirmada</h2><p class="notice info">Consulta de relaciones reales. La edición avanzada de composición se reserva para la siguiente fase; guardar General conserva todas estas relaciones.</p><h3>Base / ingredientes fijos</h3><div class="ingredient-chips">@foreach($producto->ingredientes as $ingredient)<span class="chip">{{ $ingredient->nombre }} @if(!$ingredient->is_available) · Agotado @endif</span>@endforeach</div>@foreach($producto->bloques as $block)<div class="config-block"><div class="section-heading"><h3>{{ $block->nombre }}</h3><span class="badge neutral">{{ $block->cantidadComercial() }} {{ $block->unidad_tipo->label($block->cantidadComercial()) }}</span></div>@foreach($block->gruposOpciones as $group)<p><strong>{{ $group->nombre }}</strong> · {{ $group->opciones->pluck('nombre')->implode(' / ') }}</p>@endforeach</div>@endforeach</section>
+<section class="card form-card" data-editor-panel="personalization" id="panel-personalization" role="tabpanel" aria-labelledby="tab-personalization" hidden><div class="section-heading"><h2>Personalización</h2><span class="badge blue">{{ $producto->bloques->count() }} bloques</span></div><p class="muted">Configuración actual de solo lectura. Sin cambios a los límites ni a los grupos compartidos.</p>@foreach($producto->bloques as $block)<details class="config-block" @if($loop->first) open @endif><summary>{{ $block->nombre }} · {{ $block->cantidadComercial() }} {{ $block->unidad_tipo->label($block->cantidadComercial()) }}</summary>@foreach($block->gruposOpciones as $group)@include('admin.productos.group')@endforeach</details>@endforeach @foreach($producto->gruposOpciones as $group)@include('admin.productos.group')@endforeach</section>
+<section class="card form-card" data-editor-panel="rules" id="panel-rules" role="tabpanel" aria-labelledby="tab-rules" hidden><h2>Reglas comerciales</h2><p class="muted">Reglas actuales por sujeto, sin JSON editable. No se aplican cambios implícitos.</p>@forelse($producto->reglas as $rule)<div class="rule-row"><div><strong>{{ str_replace('_',' ',$rule->tipo->value) }} · {{ $rule->ingrediente?->nombre ?? $rule->opcion?->nombre }}</strong><small>{{ $rule->metadata['condicion'] ?? $rule->metadata['uso'] ?? 'Ámbito del producto' }}</small></div><span>{{ $rule->tipo->value==='recargo' ? '$'.number_format($rule->valor,0,',','.') : number_format($rule->valor,0,',','.') }}</span><span class="badge {{ $rule->activo ? 'green' : 'neutral' }}">{{ $rule->activo ? 'Activa' : 'Inactiva' }}</span></div>@empty<p>Sin reglas adicionales.</p>@endforelse</section>
+<section class="card form-card" data-editor-panel="history" id="panel-history" role="tabpanel" aria-labelledby="tab-history" hidden><h2>Historial administrativo</h2><p class="muted">Cambios registrados desde Admin 2.0. Los snapshots anteriores no se modifican.</p>@forelse($history as $change)<div class="config-block"><strong>{{ $change->created_at->copy()->setTimezone(config('admin.timezone'))->format('d/m/Y H:i') }} · {{ $change->action }} · Usuario #{{ $change->user_id }}</strong>@foreach($change->changes as $field=>$values)<p>{{ $field }}: {{ is_scalar($values['before'] ?? null) ? $values['before'] : '—' }} → {{ is_scalar($values['after'] ?? null) ? $values['after'] : '—' }}</p>@endforeach</div>@empty<p>Sin cambios administrativos registrados.</p>@endforelse</section>
+</div><aside class="editor-preview card"><span class="eyebrow">Vista previa del cliente</span><div class="preview-image"><img src="{{ $producto->imagen && Storage::disk('public')->exists($producto->imagen) ? Storage::disk('public')->url($producto->imagen) : asset('img/logo/logo-dark-transparent.png') }}" alt="{{ $producto->nombre }}"></div><span class="badge {{ $producto->personalizable ? 'blue' : 'neutral' }}">{{ $producto->personalizable ? 'A tu gusto' : 'Fijo' }}</span><small>{{ $producto->categoria?->nombre }}</small><h2>{{ $producto->nombre ?: 'Nuevo producto' }}</h2><p>{{ $producto->unidades }} {{ $producto->unidad_tipo->label($producto->unidades) }}</p><strong class="preview-price">${{ number_format($producto->precio,0,',','.') }}</strong>@if($producto->exists && $producto->activo)<a class="btn primary" href="{{ route('menu',['q'=>$producto->nombre]) }}" target="_blank" rel="noopener">Abrir carta real ↗</a>@else<p class="notice warning">No disponible públicamente.</p>@endif<p class="muted">Vista guardada. Los cambios se reflejan al guardar.</p></aside></div></div>
 @endsection

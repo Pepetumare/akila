@@ -9,4 +9,5 @@ enum TipoReglaPromocion: string
     case Recargo = 'recargo';
     case MinPiezas = 'min_piezas';
     case CantidadIncluida = 'cantidad_incluida';
+    case Incompatible = 'incompatible';
 }

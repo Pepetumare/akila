@@ -16,7 +16,12 @@ class Ingrediente extends Model
         'nombre',
         'tipo',    // 'base' o 'extra'
         'costo',   // nullable para tipo 'base'
+        'is_available',
     ];
+
+    protected $attributes = ['is_available' => true];
+
+    protected $casts = ['is_available' => 'boolean', 'costo' => 'decimal:2'];
 
     public function productos(): BelongsToMany
     {

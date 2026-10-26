@@ -24,6 +24,10 @@ class Order extends Model
     ];
 
     protected $casts = [
+        'preparing_at' => 'immutable_datetime',
+        'ready_at' => 'immutable_datetime',
+        'delivered_at' => 'immutable_datetime',
+        'cancelled_at' => 'immutable_datetime',
         'payment_updated_at' => 'immutable_datetime',
         'subtotal' => 'decimal:2',
         'delivery_cost' => 'decimal:2',

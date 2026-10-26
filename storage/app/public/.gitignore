@@ -1,2 +1,6 @@
 *
 !.gitignore
+!productos/
+productos/*
+!productos/ai/
+!productos/ai/*.webp

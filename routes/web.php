@@ -80,13 +80,24 @@ Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'admin'])
     ->group(function () {
+        Route::redirect('/', '/admin/dashboard');
+        Route::get('kitchen', [AdminOrderController::class, 'kitchen'])->name('kitchen');
+        Route::get('orders/{order}/print', [AdminOrderController::class, 'print'])->name('orders.print');
+        Route::patch('productos/{producto}/availability', [AdminProductoController::class, 'availability'])->name('productos.availability');
+        Route::post('productos/{producto}/duplicate', [AdminProductoController::class, 'duplicate'])->name('productos.duplicate');
+        Route::patch('ingredientes/{ingrediente}/availability', [AdminIngredienteController::class, 'availability'])->name('ingredientes.availability');
+        Route::get('settings', [\App\Http\Controllers\Admin\OperationsController::class, 'settings'])->name('settings');
+        Route::put('settings', [\App\Http\Controllers\Admin\OperationsController::class, 'saveSettings'])->name('settings.update');
+        Route::get('reports', [\App\Http\Controllers\Admin\OperationsController::class, 'reports'])->name('reports');
+        Route::get('personalization', [\App\Http\Controllers\Admin\OperationsController::class, 'personalization'])->name('personalization');
+        Route::get('customers', [\App\Http\Controllers\Admin\OperationsController::class, 'customers'])->name('customers');
+        Route::view('inventory', 'admin.inventory')->name('inventory');
         Route::get('dashboard', [DashboardController::class, 'index'])
             ->name('dashboard');
 
         Route::resource('categorias', AdminCategoriaController::class);
         Route::resource('ingredientes', AdminIngredienteController::class);
-        Route::resource('productos', AdminProductoController::class)
-            ->except(['create', 'edit', 'show']);
+        Route::resource('productos', AdminProductoController::class)->except(['show']);
         Route::resource('orders', AdminOrderController::class)
             ->only(['index', 'show', 'update']);
         Route::get('orders/{order}/boleta', [AdminOrderController::class, 'download'])->name('orders.download');

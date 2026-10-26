@@ -13,7 +13,11 @@ class ProductoController extends Controller
     // Método principal para mostrar productos filtrados y ordenados
     public function index(Request $request)
     {
-        $query = Producto::query();
+        $query = Producto::disponible();
+
+        if ($request->filled('q') && is_string($request->input('q'))) {
+            $query->where('nombre', 'like', '%'.mb_substr(trim($request->input('q')), 0, 100).'%');
+        }
 
         // Filtrar por categoría si se especifica
         if ($request->filled('filter')) {
@@ -40,10 +44,15 @@ class ProductoController extends Controller
         }
 
         // Cargar relaciones
-        $productos = $query->with('categoria')->paginate(12)->withQueryString();
+        $productos = $query->with(['categoria', 'ingredientes', 'gruposOpciones.opciones'])
+            ->withCount('bloques')->withMin('bloques', 'cantidad_piezas')->withMax('bloques', 'cantidad_piezas')
+            ->paginate(12)->withQueryString();
 
         // The modal loads one product on demand; do not hydrate all menu configurations.
-        $categorias = Categoria::all();
+        $categorias = Categoria::where('activo', true)
+            ->whereHas('productos', fn ($q) => $q->where('activo', true))
+            ->withCount(['productos as disponibles_count' => fn ($q) => $q->where('activo', true)])
+            ->orderBy('orden')->orderBy('id')->get();
 
         return view('menu.index', compact('productos', 'categorias'));
     }
@@ -51,7 +60,7 @@ class ProductoController extends Controller
     // Retorna datos específicos de un producto en formato JSON
     public function show($id)
     {
-        $producto = Producto::with('ingredientes', 'swappables')->findOrFail($id);
+        $producto = Producto::disponible()->with('ingredientes', 'swappables')->findOrFail($id);
 
         return response()->json($producto);
     }

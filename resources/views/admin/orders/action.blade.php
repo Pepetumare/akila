@@ -1,0 +1,2 @@
+@php($next=match($order->status){'pendiente'=>['en preparación','Comenzar'],'en preparación'=>['listo','Marcar listo'],'listo'=>['entregado','Entregar'],default=>null})
+@if($next)<form method="post" action="{{ route('admin.orders.update',$order) }}" class="transition-form">@csrf @method('PATCH')<input type="hidden" name="expected_status" value="{{ $order->status }}"><input type="hidden" name="status" value="{{ $next[0] }}"><button class="btn {{ $order->status==='listo' ? 'positive' : 'primary' }}" type="submit">{{ $next[1] }} →</button></form>@endif

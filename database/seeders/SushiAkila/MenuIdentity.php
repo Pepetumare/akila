@@ -16,11 +16,18 @@ class MenuIdentity
         return [
             'palmitos' => 'palmito', 'champinones' => 'champinon',
             'camarones' => 'camaron', 'proteinas' => 'proteina',
+            'pollo-apanada' => 'pollo-apanado', 'pollo-crispy' => 'pollo-apanado',
+            'soya' => 'salsa-de-soya', 'soja' => 'salsa-de-soya',
+            'salsa-soja' => 'salsa-de-soya', 'salsa-de-soja' => 'salsa-de-soya', 'salsa-soya' => 'salsa-de-soya',
         ][$key] ?? $key;
     }
 
     public static function ingredient(string $name, string $type): Ingrediente
     {
+        $name = [
+            'pollo-apanado' => 'Pollo apanado', 'camaron-apanado' => 'Camarón apanado',
+            'salsa-de-soya' => 'Salsa de soya', 'salsa-agridulce' => 'Salsa agridulce',
+        ][self::ingredientKey($name)] ?? $name;
         $matches = Ingrediente::all()->filter(fn ($ingredient) => self::ingredientKey($ingredient->nombre) === self::ingredientKey($name));
         if ($matches->count() > 1) {
             throw new RuntimeException("Hay ingredientes equivalentes duplicados para {$name}; resolver sus referencias sin borrado automático.");

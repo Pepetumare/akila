@@ -2,27 +2,7 @@
 
 namespace App\Services;
 
-use Brick\Math\BigDecimal;
-use Illuminate\Validation\ValidationException;
+use App\Commerce\Pricing\CommerceMoney;
 
-class MenuMoney
-{
-    public static function cents(int|float|string $value): int
-    {
-        try {
-            $amount = BigDecimal::of((string) $value)->toScale(2)->getUnscaledValue()->toInt();
-        } catch (\Throwable) {
-            throw ValidationException::withMessages(['configuration' => 'El precio configurado necesita revisión.']);
-        }
-        if ($amount < 0) {
-            throw ValidationException::withMessages(['configuration' => 'El precio configurado necesita revisión.']);
-        }
-
-        return $amount;
-    }
-
-    public static function decimal(int $cents): string
-    {
-        return (string) BigDecimal::ofUnscaledValue($cents, 2);
-    }
-}
+/** Compatibility name. All monetary operations live in CommerceMoney. */
+class MenuMoney extends CommerceMoney {}

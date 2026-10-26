@@ -2,264 +2,163 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\TipoProducto;
+use App\Enums\UnidadComercial;
 use App\Http\Controllers\Controller;
+use App\Models\AdminChange;
 use App\Models\Categoria;
-use App\Models\Ingrediente;
 use App\Models\Producto;
+use App\Services\MenuConfigurationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ProductoController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Producto::query();
-
-        if ($q = $request->input('q')) {
+        $query = Producto::with(['categoria', 'ingredientes'])->withCount('bloques', 'reglas');
+        if ($q = $request->string('q')->limit(100)->toString()) {
             $query->where('nombre', 'like', "%{$q}%");
         }
+        if ($request->filled('categoria')) { $query->where('categoria_id', $request->integer('categoria')); }
+        if (in_array($request->input('activo'), ['0', '1'], true)) { $query->where('activo', $request->boolean('activo')); }
+        if (in_array($request->input('personalizable'), ['0', '1'], true)) { $query->where('personalizable', $request->boolean('personalizable')); }
+        $productos = $query->orderBy('orden')->orderBy('id')->paginate(15)->withQueryString();
+        $categorias = Categoria::orderBy('orden')->pluck('nombre', 'id');
 
-        $productos = $query->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->appends($request->only('q'));
-
-        $productos->getCollection()->transform(function ($producto) {
-            $producto->url_imagen = $producto->imagen && Storage::disk('public')->exists($producto->imagen)
-                ? Storage::disk('public')->url($producto->imagen)
-                : asset('img/no_disponible.png');
-
-            return $producto;
-        });
-
-        $categorias = Categoria::pluck('nombre', 'id');
-        // para filtros rápidos, cargamos todos los ingredientes
-        $ingredientes = Ingrediente::orderBy('nombre')->get();
-
-        $wrappers = $ingredientes->where('tipo', 'envoltura');
-        $proteins = $ingredientes->where('tipo', 'proteina');
-        $vegetables = $ingredientes->where('tipo', 'vegetal');
-
-        return view('admin.productos.index', compact(
-            'productos',
-            'categorias',
-            'ingredientes',
-            'wrappers',
-            'proteins',
-            'vegetables'
-        ));
+        return view('admin.productos.index', compact('productos', 'categorias'));
     }
-    // public function index(Request $request)
-    // {
-    //     $productos = Producto::with('ingredientes')
-    //         ->orderBy('created_at', 'desc')
-    //         ->paginate(12)
-    //         ->appends($request->only('filter'));
-
-    //     $categorias = Categoria::orderBy('nombre')->get();
-
-    //     return view('menu', compact('productos', 'categorias'));
-    // }
 
     public function create()
     {
-        $categorias = Categoria::orderBy('nombre')->pluck('nombre', 'id');
-        $wrappers = Ingrediente::where('tipo', 'envoltura')->orderBy('nombre')->get();
-        $proteins = Ingrediente::where('tipo', 'proteina')->orderBy('nombre')->get();
-        $vegetables = Ingrediente::where('tipo', 'vegetal')->orderBy('nombre')->get();
+        $producto = new Producto(['precio' => 0, 'unidades' => 1, 'activo' => false, 'personalizable' => false]);
+        $categorias = Categoria::orderBy('orden')->pluck('nombre', 'id');
+        $history = collect();
 
-        return view('admin.productos.create', compact('categorias', 'wrappers', 'proteins', 'vegetables'));
-    }
-
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'nombre' => 'required|string',
-            'descripcion' => 'nullable|string',
-            'precio' => 'required|numeric|min:0',
-            'categoria_id' => 'required|exists:categorias,id',
-            'imagen' => 'nullable|image|max:2048',
-            'personalizable' => 'required|in:0,1',
-            'unidades' => 'required|integer|min:1',
-            'envolturas' => 'required|array|min:1',
-            'envolturas.*' => 'exists:ingredientes,id',
-            'Proteínas' => 'nullable|array',
-            'Proteínas.*' => 'exists:ingredientes,id',
-            'cantidad_proteina' => 'nullable|array',
-            'cantidad_proteina.*' => 'integer|min:1',
-            'vegetales' => 'nullable|array',
-            'vegetales.*' => 'exists:ingredientes,id',
-            'cantidad_vegetal' => 'nullable|array',
-            'cantidad_vegetal.*' => 'integer|min:1',
-        ]);
-
-        // Cast Boolean
-        $data['personalizable'] = (bool) $data['personalizable'];
-
-        // Procesar imagen
-        if ($request->hasFile('imagen')) {
-            $data['imagen'] = $request->file('imagen')->store('productos', 'public');
-        }
-
-        // —— Validación adicional de cantidades según reglas de negocio ——
-        // Proteínas:
-        // foreach ($data['Proteínas'] ?? [] as $id) {
-        //     $ing   = Ingrediente::findOrFail($id);
-        //     $qty   = $data['cantidad_proteina'][$id] ?? 1;
-        //     $max   = in_array(strtolower($ing->nombre), ['salmón', 'salmon', 'carne', 'atún', 'atun']) ? 1 : 2;
-        //     if ($qty > $max) {
-        //         throw ValidationException::withMessages([
-        //             "cantidad_proteina.{$id}" => "Máximo {$max} unidad(es) permitido(s) para {$ing->nombre}."
-        //         ]);
-        //     }
-        // }
-        // // Vegetales:
-        // foreach ($data['vegetales'] ?? [] as $id) {
-        //     $qty = $data['cantidad_vegetal'][$id] ?? 1;
-        //     if ($qty > 2) {
-        //         $ing = Ingrediente::findOrFail($id);
-        //         throw ValidationException::withMessages([
-        //             "cantidad_vegetal.{$id}" => "Máximo 2 unidades permitido para {$ing->nombre}."
-        //         ]);
-        //     }
-        // }
-
-        // Crear producto
-        $producto = Producto::create([
-            'nombre' => $data['nombre'],
-            'descripcion' => $data['descripcion'] ?? '',
-            'precio' => $data['precio'],
-            'categoria_id' => $data['categoria_id'],
-            'personalizable' => $data['personalizable'],
-            'unidades' => $data['unidades'],
-            'imagen' => $data['imagen'] ?? null,
-        ]);
-
-        // Sincronizar envoltura + Proteínas + vegetales
-        $sync = [];
-        // cada base elegida por el admin
-        foreach ($data['envolturas'] as $id) {
-            $sync[$id] = ['cantidad_permitida' => 1];
-        }
-
-        foreach ($data['Proteínas'] ?? [] as $id) {
-            $sync[$id] = ['cantidad_permitida' => $data['cantidad_proteina'][$id] ?? 1];
-        }
-        foreach ($data['vegetales'] ?? [] as $id) {
-            $sync[$id] = ['cantidad_permitida' => $data['cantidad_vegetal'][$id] ?? 1];
-        }
-        $producto->ingredientes()->sync($sync);
-
-        if ($request->hasFile('imagen')) {
-            $file = $request->file('imagen');
-
-            // 👇 Depurar antes de guardar
-            logger('Nombre original: '.$file->getClientOriginalName());
-            logger('Extensión: '.$file->getClientOriginalExtension());
-
-            $path = $file->store('productos', 'public');
-
-            logger('Guardado en: '.$path);
-
-            $data['imagen'] = $path;
-        }
-
-        return redirect()
-            ->route('admin.productos.index')
-            ->with('success', 'Producto creado correctamente.');
+        return view('admin.productos.edit', compact('producto', 'categorias', 'history'));
     }
 
     public function edit(Producto $producto)
     {
-        $categorias = Categoria::orderBy('nombre')->pluck('nombre', 'id');
-        $wrappers = Ingrediente::where('tipo', 'envoltura')->orderBy('nombre')->get();
-        $proteins = Ingrediente::where('tipo', 'proteina')->orderBy('nombre')->get();
-        $vegetables = Ingrediente::where('tipo', 'vegetal')->orderBy('nombre')->get();
+        $producto->load(MenuConfigurationService::RELATIONS);
+        $producto->load('reglas.ingrediente', 'reglas.opcion');
+        $categorias = Categoria::orderBy('orden')->pluck('nombre', 'id');
+        $history = AdminChange::where('entity_type', $producto->getMorphClass())->where('entity_id', $producto->id)->latest()->limit(40)->get();
 
-        return view('admin.productos.edit', compact('producto', 'categorias', 'wrappers', 'proteins', 'vegetables'));
+        return view('admin.productos.edit', compact('producto', 'categorias', 'history'));
+    }
+
+    private function data(Request $request, ?Producto $producto = null): array
+    {
+        if (! $producto && ! $request->filled('slug')) {
+            $request->request->remove('slug');
+        }
+        return $request->validate([
+            'nombre' => 'required|string|max:255', 'slug' => ['sometimes', 'required', 'alpha_dash', 'max:255', Rule::unique('productos')->ignore($producto?->id)],
+            'descripcion' => 'nullable|string|max:10000', 'precio' => 'required|numeric|min:0.01|max:999999.99|decimal:0,2',
+            'categoria_id' => 'required|exists:categorias,id', 'activo' => 'sometimes|boolean',
+            'orden' => 'sometimes|integer|min:0|max:100000', 'unidades' => 'sometimes|integer|min:1|max:65535',
+            'tipo' => ['sometimes', Rule::enum(TipoProducto::class)], 'unidad_tipo' => ['sometimes', Rule::enum(UnidadComercial::class)],
+            'imagen' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $data = $this->data($request);
+        // New products start unpublished until composition has been reviewed.
+        $data['activo'] = false;
+        $data['personalizable'] = false;
+        if ($request->hasFile('imagen')) { $data['imagen'] = $request->file('imagen')->store('productos', 'public'); }
+        $producto = DB::transaction(function () use ($data) {
+            $product = Producto::create($data);
+            if (isset($data['slug'])) { $product->forceFill(['slug' => $data['slug']])->saveQuietly(); }
+            AdminChange::record($product, 'creado', ['nombre' => ['before' => null, 'after' => $product->nombre]]);
+
+            return $product;
+        });
+
+        return redirect()->route('admin.productos.edit', $producto)->with('success', 'Borrador creado, todavía inactivo. Completa y revisa su composición antes de publicarlo.');
     }
 
     public function update(Request $request, Producto $producto)
     {
-        $data = $request->validate([
-            'nombre' => 'required|string',
-            'descripcion' => 'nullable|string',
-            'precio' => 'required|numeric|min:0',
-            'categoria_id' => 'required|exists:categorias,id',
-            'imagen' => 'nullable|image|max:2048',
-            'personalizable' => 'required|in:0,1',
-            'unidades' => 'required|integer|min:1',
-            'envolturas' => 'required|array|min:1',
-            'envolturas.*' => 'exists:ingredientes,id',
-            'Proteínas' => 'nullable|array',
-            'Proteínas.*' => 'exists:ingredientes,id',
-            'cantidad_proteina' => 'nullable|array',
-            'cantidad_proteina.*' => 'integer|min:1',
-            'vegetales' => 'nullable|array',
-            'vegetales.*' => 'exists:ingredientes,id',
-            'cantidad_vegetal' => 'nullable|array',
-            'cantidad_vegetal.*' => 'integer|min:1',
-        ]);
-
-        $data['personalizable'] = (bool) $data['personalizable'];
-
-        if ($request->hasFile('imagen')) {
-            if ($producto->imagen) {
-                Storage::disk('public')->delete($producto->imagen);
+        $data = $this->data($request, $producto);
+        if (! $request->hasFile('imagen')) {
+            unset($data['imagen']);
+        }
+        DB::transaction(function () use ($data, $request, $producto) {
+            $locked = Producto::whereKey($producto->id)->lockForUpdate()->firstOrFail();
+            $locked->load('ingredientes', 'bloques', 'gruposOpciones');
+            if (($data['activo'] ?? $locked->activo) && $locked->ingredientes->contains(fn ($i) => data_get($i->pivot->metadata, 'opcion_vegetariana.estado') === 'pendiente_definicion_operativa')) {
+                throw ValidationException::withMessages(['activo' => 'Composición diferencial pendiente: este producto debe permanecer inactivo.']);
             }
-            $data['imagen'] = $request->file('imagen')->store('productos', 'public');
-        }
+            if ($locked->bloques->isNotEmpty() && ((int) ($data['unidades'] ?? $locked->unidades) !== (int) $locked->unidades || ($data['unidad_tipo'] ?? $locked->unidad_tipo->value) !== $locked->unidad_tipo->value)) {
+                throw ValidationException::withMessages(['unidades' => 'Las unidades están vinculadas a bloques. Se requiere editar y validar la configuración completa.']);
+            }
+            $before = $locked->only(array_keys($data));
+            if ($request->hasFile('imagen')) { $data['imagen'] = $request->file('imagen')->store('productos', 'public'); }
+            $locked->fill($data)->save();
+            if (isset($data['slug'])) { $locked->forceFill(['slug' => $data['slug']])->saveQuietly(); }
+            $changes = [];
+            foreach (array_keys($data) as $key) {
+                if (($before[$key] ?? null) != $locked->getAttribute($key)) { $changes[$key] = ['before' => $before[$key] ?? null, 'after' => $locked->getAttribute($key)]; }
+            }
+            AdminChange::record($locked, 'actualizado', $changes);
+        });
 
-        // Validación extra idéntica a store()
-        // foreach ($data['Proteínas'] ?? [] as $id) {
-        //     $ing = Ingrediente::findOrFail($id);
-        //     $qty = $data['cantidad_proteina'][$id] ?? 1;
-        //     $max = in_array(strtolower($ing->nombre), ['salmón', 'salmon', 'carne', 'atún', 'atun']) ? 1 : 2;
-        //     if ($qty > $max) {
-        //         throw ValidationException::withMessages([
-        //             "cantidad_proteina.{$id}" => "Máximo {$max} unidad(es) permitido(s) para {$ing->nombre}."
-        //         ]);
-        //     }
-        // }
-        // foreach ($data['vegetales'] ?? [] as $id) {
-        //     $qty = $data['cantidad_vegetal'][$id] ?? 1;
-        //     if ($qty > 2) {
-        //         $ing = Ingrediente::findOrFail($id);
-        //         throw ValidationException::withMessages([
-        //             "cantidad_vegetal.{$id}" => "Máximo 2 unidades permitido para {$ing->nombre}."
-        //         ]);
-        //     }
-        // }
+        return back()->with('success', 'Producto guardado. Bloques, grupos, opciones y reglas conservados.');
+    }
 
-        // Actualizar producto
-        $producto->update([
-            'nombre' => $data['nombre'],
-            'descripcion' => $data['descripcion'] ?? '',
-            'precio' => $data['precio'],
-            'categoria_id' => $data['categoria_id'],
-            'personalizable' => $data['personalizable'],
-            'unidades' => $data['unidades'],
-            'imagen' => $data['imagen'] ?? $producto->imagen,
-        ]);
+    public function availability(Request $request, Producto $producto)
+    {
+        $request->validate(['activo' => 'required|boolean']);
+        $request->merge($producto->only('nombre', 'precio', 'categoria_id'));
+        return $this->update($request, $producto);
+    }
 
-        // Sincronizar ingrediente-producto
-        $sync = [];
-        // cada base elegida por el admin
-        foreach ($data['envolturas'] as $id) {
-            $sync[$id] = ['cantidad_permitida' => 1];
-        }
+    public function duplicate(Producto $producto)
+    {
+        $copy = DB::transaction(function () use ($producto) {
+            $producto->load('ingredientes', 'gruposOpciones', 'bloques.gruposOpciones', 'reglas', 'promocion.productos');
+            $copy = $producto->replicate();
+            $copy->nombre .= ' (copia)';
+            $copy->activo = false;
+            $copy->save();
+            foreach ($producto->ingredientes as $ingredient) {
+                $copy->ingredientes()->attach($ingredient->id, $ingredient->pivot->only(['cantidad_permitida', 'cantidad', 'unidad', 'obligatorio', 'reemplazable', 'orden', 'metadata']));
+            }
+            $assign = fn ($groups) => $groups->mapWithKeys(fn ($group) => [$group->id => $group->pivot->only(['min_selections', 'max_selections', 'obligatorio', 'orden'])])->all();
+            $copy->gruposOpciones()->sync($assign($producto->gruposOpciones));
+            foreach ($producto->bloques as $block) {
+                $newBlock = $block->replicate();
+                $newBlock->producto_id = $copy->id;
+                $newBlock->save();
+                $newBlock->gruposOpciones()->sync($assign($block->gruposOpciones));
+            }
+            foreach ($producto->reglas as $rule) {
+                $newRule = $rule->replicate();
+                $newRule->producto_id = $copy->id;
+                $newRule->save();
+            }
+            if ($producto->promocion) {
+                $promotion = $producto->promocion->replicate();
+                $promotion->producto_id = $copy->id;
+                $promotion->nombre = $copy->nombre;
+                $promotion->save();
+                foreach ($producto->promocion->productos as $component) {
+                    $promotion->productos()->attach($component->id, ['cantidad' => $component->pivot->cantidad]);
+                }
+            }
+            AdminChange::record($copy, 'duplicado', ['source' => ['before' => $producto->id, 'after' => $copy->id]]);
 
-        foreach ($data['Proteínas'] ?? [] as $id) {
-            $sync[$id] = ['cantidad_permitida' => $data['cantidad_proteina'][$id] ?? 1];
-        }
-        foreach ($data['vegetales'] ?? [] as $id) {
-            $sync[$id] = ['cantidad_permitida' => $data['cantidad_vegetal'][$id] ?? 1];
-        }
-        $producto->ingredientes()->sync($sync);
+            return $copy;
+        });
 
-        return redirect()
-            ->route('admin.productos.index')
-            ->with('success', 'Producto actualizado correctamente.');
+        return redirect()->route('admin.productos.edit', $copy)->with('success', 'Copia creada inactiva. Los grupos compartidos se conservan; no se publica automáticamente.');
     }
 
     public function destroy(Producto $producto)
@@ -267,14 +166,6 @@ class ProductoController extends Controller
         if ($producto->orderItems()->exists() || $producto->promocion()->exists()) {
             return back()->withErrors('Este producto tiene referencias históricas o una promoción vinculada. Consérvalo y desactívalo.');
         }
-        $image = $producto->imagen;
-        $producto->delete();
-        if ($image) {
-            Storage::disk('public')->delete($image);
-        }
-
-        return redirect()
-            ->route('admin.productos.index')
-            ->with('success', 'Producto eliminado correctamente.');
+        return back()->withErrors('Utiliza desactivar para retirar un producto conservando su configuración.');
     }
 }

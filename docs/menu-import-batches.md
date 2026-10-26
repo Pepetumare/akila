@@ -492,3 +492,262 @@ Suite completa final: **226 pruebas aprobadas, 1427 aserciones y 0 fallos**. Est
 El comando solicitado `php artisan pint --test` devuelve «Command pint is not defined»: este proyecto usa el binario de Composer, no un comando Artisan registrado. Se ejecutó el equivalente **`php vendor/bin/pint --test` sobre los doce archivos PHP nuevos/modificados de esta fase**, resultado passed. No se formatean archivos ajenos para alterar artificialmente el resultado.
 
 Pendientes de datos: Carne y eventual recargo premium en combos requieren confirmación; las preparaciones individuales no declaradas de Las Mismas no se inventan. No se incorporaron fotos 31–42, inventario, gramajes o delivery nuevo. `.env` intacto; sin commit.
+
+# Batch 04 — Fotos 31 a 40
+
+## Fuente, alcance e identidades
+
+Fuente: transcripción completa proporcionada por el usuario para fotos lógicas 31–40. No se afirma inspección de originales no adjuntos. El principal ejecuta Batch01 → Batch02 → Batch03 → Batch04 dentro de su transacción. No hay referencia a Batch05. Batch04 reutiliza MenuBatchImporter, MenuIdentity y las tablas de composición, opciones y reglas existentes. No hay migraciones nuevas.
+
+| Foto | Producto | Operación | Precio CLP | Cantidad / configuración |
+|---|---|---|---:|---|
+| 32 | Mi Favorita / mi-favorita | Confirmar, ID 4 → 4 | 18990 | 50 piezas; 20 pollo, 10 camarón, 10 kanikama, 10 choclo; 30 envueltas y 20 fritas |
+| 33 | Nikkei Jamón Serrano / nikkei-jamon-serrano | Nuevo | 6990 | 10 piezas; pollo apanado, palta, queso crema y jamón serrano fijo |
+| 34 | Nikkei Pollo Crispy / nikkei-pollo-crispy | Nuevo | 6990 | 10 piezas; pollo apanado, palta y queso crema; envolturas pendientes |
+| 35 | Nikkei Camarón Apanado / nikkei-camaron-apanado | Nuevo | 6990 | 10 piezas; camarón apanado, palta y queso crema; Almendras como única envoltura confirmada |
+| 36 | Nikkei Salmón Ahumado / nikkei-salmon-ahumado | Nuevo | 6990 | 10 piezas; salmón ahumado, palta y queso crema; envolturas pendientes |
+| 38 | Goloso / goloso | Confirmar, ID 1 → 1 | 10000 | 20 piezas de pollo y palta fritas; base queso crema/cebollín |
+| 39 | 20 Piezas a Elección / 20-piezas-a-eleccion | Nuevo | 10000 | 2 bloques de 10; una proteína O un vegetal por bloque |
+| 40 | AkilaBurger / akilaburger | Nuevo | 7500 | 1 unidad; base fija queso crema, cebollín y palta + una elección de relleno |
+
+Son exactamente seis productos nuevos, total 34. Fotos 31 y 37 son reglas, no productos. Nueva categoría: Nikkei (slug nikkei, orden 5). No se crean categorías Extras o Delivery. Mi Favorita conserva la composición anterior y las envolturas declaradas queso crema/palta/sésamo, sin inventar el mapa de preparación por bloque. Goloso conserva sus dos bloques fijos.
+
+## Ingredientes y extras
+
+Siete ingredientes nuevos/reutilizables: Pollo apanado y Camarón apanado (proteina), Salsa de soya y Salsa agridulce (salsa), Jamón serrano (envoltura), Almendras (topping) y Salmón ahumado (proteina). Total 22. No se crean Arroz/Nori ni se agrega Cebollín a los Nikkei, pues sus fichas no los declaran. Todas las cantidades físicas permanecen NULL.
+
+MenuIdentity normaliza pollo crispy/pollo apanada/pollo apanado a **Pollo apanado**; soya/soja/salsa soja/salsa de soja/salsa soya a **Salsa de soya**, preservando IDs. Camarón apanado mantiene una identidad normalizada por tildes/caso. Salmón ahumado es distinto de Salmón. Ante equivalentes duplicados se detiene y revierte el lote, sin fusionar referencias automáticamente.
+
+Catálogo central reutilizable en GrupoOpcion `ingredientes-extras`, con opciones que referencian los ingredientes:
+
+- $1000: Camarón, Pollo, Kanikama, Choclo, Palmito, Palta y Champiñón.
+- $2000: Salmón, Pollo apanado, Camarón apanado y Atún.
+
+Este grupo **no se asigna globalmente a los productos**. La autoridad sigue siendo la asignación explícita por producto/bloque. Goloso rechaza IDs de extras no asignados. No hay productos «Extra Pollo» ni precios en ingredientes.costo. Los rellenos incluidos y composiciones fijas usan sus propios grupos/relaciones sin recargo: la existencia del mismo ingrediente en el catálogo de extras no convierte el Nikkei en $8990 ni AkilaBurger en $9500.
+
+## Salsas: Foto 31 como autoridad
+
+| Piezas de promoción | Potes Salsa de soya | Potes Salsa agridulce |
+|---|---:|---:|
+| 20 | 1 | 1 |
+| 30–50 | 2 | 1 |
+| 60–70 | 2 | 2 |
+| 80–90 | 4 | 3 |
+| 100 | 5 | 3 |
+
+Reglas por producto, tipo cantidad_incluida, sujeto Ingrediente, unidad pote y uso salsa_incluida. Precio incluido 0.00, intercambiable=false, foto de autoridad 31. Se aplican solo a promociones de piezas del catálogo importado, conservando registros administrativos ajenos. No se cambia el precio base. El Emperador (150 piezas): **cantidad de salsas incluidas pendiente de confirmación**, sin regla inventada.
+
+Foto 37 dice genéricamente «2 soya + 1 agridulce por promoción». Se conserva como discrepancia de carta simplificada/antigua; no sobrescribe la tabla específica de Foto 31. Sus listas abreviadas tampoco eliminan los extras premium confirmados por Foto 31.
+
+Grupo reutilizable `salsas-adicionales`, asignado explícitamente a las promociones importadas de piezas, opcional 0–2 opciones distintas: Salsa de soya adicional $500 y Salsa agridulce adicional $800. Permite comprar un pote adicional de cada tipo por presentación; no se implementa cantidad arbitraria por opción. Ambos cuestan $1300 adicionales. No ofrece sustitución gratuita de incluidas. No se interpreta la selección de una salsa como relleno ni repetición de proteína/vegetal.
+
+La cotización nueva añade `detalle['Salsas incluidas']`, resuelto exclusivamente desde reglas del servidor. Se conserva en snapshot v2 mediante el servicio existente y se presenta con el resumen compartido en carrito/pedido/PDF. No requiere selección del cliente ni reescribe snapshots anteriores. Los IDs enviados de opciones adicionales se validan y los precios enviados por cliente se ignoran.
+
+## Envolturas Nikkei: restricciones deliberadas
+
+La documentación anterior confirma envolturas para promociones de sushi; no establece que todas sean válidas para Nikkei. No se propagan queso crema/palta/sésamo/ciboulette/Frito ni Almendras entre fichas sin confirmación.
+
+- Jamón Serrano: composición fija completa, sin selector.
+- Pollo Crispy y Salmón Ahumado: grupo estructural `envoltura-nikkei-pendiente`, sin opciones ni asignación que bloquee una compra con una elección imposible. Se venden con su composición declarada y sin selectores de proteína/relleno; la personalización de envoltura queda pendiente hasta tener opciones específicas. No se inventa una envoltura por defecto.
+- Camarón Apanado: grupo `envoltura-nikkei-almendras` con una única opción Almendras a $0; se resuelve automáticamente como configuración fija confirmada, sin exigir un clic redundante. No se amplía a otros Nikkei.
+
+La composición fija sin bloques se cotiza con MenuConfigurationService y queda completa en detalle/snapshot. El importador admite una base explícita por ficha; los lotes previos mantienen su base predeterminada. No se inventan bloques de rolls para estos productos.
+
+## 20 piezas y AkilaBurger
+
+20 Piezas a Elección usa un grupo single de ocho rellenos: Pollo, Kanikama, Camarón, Salmón, Palta, Choclo, Champiñón y Palmito. Cada uno de sus dos bloques exige exactamente uno. Envolturas opcionales limitadas a Frito, Queso crema y Palta. Repetición máximo dos salvo Salmón máximo una. Pollo/Pollo cuesta $10000; Salmón/Salmón se rechaza. Cambios de relleno/envoltura almacenados como recargo condicional $1000 según Foto 39; se conserva la semántica del motor: una primera elección sin referencia previa no constituye modificación pagada. Se usa el contenido vegetal de la ficha pese al error del rótulo «Proteínas».
+
+AkilaBurger tiene un grupo single obligatorio a nivel producto, sin bloques: Pollo, Kanikama, Salmón, Atún, Camarón, Choclo, Palmito, Palta y Champiñón. La base fija no es removible ni reemplazable. Cualquier elección cuesta $7500, incluida Palta aunque ya forme parte de la base. Sin elección o dos elecciones se rechazan.
+
+## Delivery
+
+Configuración sencilla desacoplada del catálogo: `config/delivery.php`, localidad San José, tarifa local $2500, tarifa exterior NULL y estado pending_manual_quote. No requiere tabla ni migración. El checkout local usa esta configuración.
+
+Se encontró un cálculo heredado **$2500 + $500/km**, no respaldado por estas fuentes. Se retira ese cobro automático y su texto de la pantalla. Los intentos de checkout fuera de San José reciben un error de cotización manual antes de crear pedido/preferencia, sin asignarles $2500 ni un total ficticio. Se mantienen campos históricos de orders; no se modifica la verificación de Mercado Pago ni los importes de pedidos existentes. No hay geolocalización ni motor por distancia.
+
+## Verificación y pendientes
+
+Las pruebas de Batch03 se acotan explícitamente a Batch01+02+03, conservando sus aserciones de fase; la precedencia/idempotencia del principal completo se verifica ahora en Batch04. No se modifican CommerceSecurityTest, MenuArchitectureTest ni MenuCommercialIntegrationTest para ocultar regresiones.
+
+Pendientes de fuente: envolturas específicas de Nikkei Pollo Crispy/Salmón Ahumado, alternativas adicionales de Camarón Apanado, salsas de 150 piezas y tarifa exterior. Se conservan los pendientes anteriores de otras fases. No se cargan fotos 41–42, Arrollados, Gohan Flecha o Gohan Orion; no hay inventario, gramajes, cambios de .env ni commit.
+
+## Carga real, conteos e idempotencia
+
+Se ejecutó `php artisan db:seed --class=SushiAkilaMenuSeeder` dos veces en MariaDB local. Ambas terminaron con código 0 y orden Batch01/02/03/04.
+
+| Tabla | Antes | Primera ejecución | Segunda ejecución |
+|---|---:|---:|---:|
+| categorias | 4 | 5 | 5 |
+| ingredientes | 15 | 22 | 22 |
+| productos | 28 | 34 | 34 |
+| promociones | 25 | 26 | 26 |
+| ingrediente_producto | 137 | 156 | 156 |
+| grupos_opciones | 21 | 28 | 28 |
+| opciones | 79 | 113 | 113 |
+| grupo_opcion_producto | 4 | 28 | 28 |
+| bloques_promocion | 128 | 130 | 130 |
+| bloque_grupo_opcion | 183 | 187 | 187 |
+| reglas_promocion | 418 | 479 | 479 |
+| users | 1 | 1 | 1 |
+| orders | 1 | 1 | 1 |
+| order_items | 1 | 1 | 1 |
+
+Los 28 IDs previos de productos se conservaron, incluidos Mi Favorita 4 → 4 y Goloso 1 → 1. IDs nuevos: Jamón Serrano 29, Pollo Crispy 30, Camarón Apanado 31, Salmón Ahumado 32, 20 Piezas a Elección 33 y AkilaBurger 34. Estos números son resultados observados; no están hardcodeados en la carga.
+
+Ambas ejecuciones coinciden en IDs y todos los valores comerciales, excluyendo timestamps. Huella SHA-256 de IDs: `43cb1184dc6d85e425a6f28d391dad7aa5196e1ebcf84b58e18e6f8b99c1ca93`; de valores: `de8971e3626d8b00cab44f868d3111baa0ec09c6b98c08c4bd377df2ed036fbe`. La huella completa de users/orders/order_items antes/después permanece idéntica. No se modificaron pedidos, snapshots ni importes históricos.
+
+## Comprobación en Chrome local
+
+Se controló Chrome headless local mediante CDP, con peticiones reales al servidor local y revisión de capturas de escritorio y móvil. Solo se modificó el carrito de una sesión de prueba; no se crearon pedidos ni pagos reales.
+
+- 20 Piezas a Elección: dos bloques; Pollo/Pollo $10000; Salmón/Salmón rechazado por servidor y botón deshabilitado. Pollo/Camarón se agrega al carrito por $10000.
+- AkilaBurger: base queso crema/cebollín/palta visible, cero bloques; sin elección no permite agregar. Salmón y Palta cuestan $7500.
+- Los cuatro Nikkei muestran 10 piezas y $6990, sin +$2000. Jamón Serrano muestra su composición completa y ningún selector. Pollo Crispy y Salmón Ahumado no solicitan proteína ni una envoltura sin opciones confirmadas. Camarón Apanado muestra Almendras como única envoltura confirmada, resuelta automáticamente.
+- Goloso $10000; una soya adicional da $10500, conserva incluidas y se agrega al carrito. Mi Favorita $18990 y cinco bloques de composición correcta. Sus IDs son los mismos.
+- Carrito presenta los potes incluidos desde el detalle, sin selección manual ni intercambios. Móvil 390 px: documento 390; modal 374/374, sin exceso horizontal. Sin excepciones JavaScript.
+
+## Archivos de Batch04
+
+Nuevos: `database/seeders/SushiAkila/Batch04Data.php`, `database/seeders/SushiAkilaMenuBatch04Seeder.php`, `config/delivery.php`, `tests/Feature/SushiAkilaMenuBatch04Test.php`.
+
+Modificados: `MenuBatchImporter.php` (base explícita opcional), `MenuIdentity.php` (alias), `SushiAkilaMenuSeeder.php` (orden), `MenuConfigurationService.php` (composición fija sin bloques y salsas), `PromotionRuleEvaluator.php` (salsas no son relleno), `CheckoutController.php` y vista de checkout (tarifas), módulo `menuPersonalization.js` y componentes `menu-product-modal`/`menu-selection-summary` (adicionales y detalle), prueba de Batch03 (alcance explícito), este documento y assets/manifest de Vite regenerados.
+
+ProductPricingService, OrderItemSnapshotService y servicios de Mercado Pago conservan su implementación. Se amplía su configuración y el detalle que ya transportan; no se introduce otro cotizador/carrito ni contrato histórico alternativo.
+
+## Validaciones por separado
+
+Todas las siguientes verificaciones terminaron con código 0. Las pruebas usan SQLite en memoria con extensiones habilitadas solo para el proceso, sin modificar php.ini ni .env ni cargar fixtures en MariaDB.
+
+| Comprobación | Pruebas aprobadas | Aserciones |
+|---|---:|---:|
+| CommerceSecurityTest | 59 | 183 |
+| MenuArchitectureTest | 33 | 98 |
+| SushiAkilaMenuBatch01Test | 15 | 241 |
+| SushiAkilaMenuBatch02Test | 22 | 373 |
+| SushiAkilaMenuBatch03Test | 38 | 252 |
+| SushiAkilaMenuBatch04Test | 34 | 409 |
+| MenuCommercialIntegrationTest | 31 | 186 |
+
+Batch04 cubre las seis identidades nuevas, conservación de las anteriores, estado completo tras reejecución, 10 piezas y precio de cada Nikkei, composición en snapshot sin premium indebido, elecciones de 20 piezas/IDs ajenos/bloques manipulados, todas las elecciones de AkilaBurger y sus límites, catálogo central de extras y alias, matriz detallada de salsas, adicionales cobrados, ausencia de cantidad para 150 y rechazo de entrega exterior sin tarifa.
+
+`npm run build`: correcto, 66 módulos; assets y manifest regenerados. `php vendor/bin/pint --test` sobre los once archivos PHP nuevos/modificados: passed. `git diff --check`: correcto. `php artisan migrate:status`: 45 aplicadas, ninguna pendiente. `php artisan route:list`: correcto, 58 rutas. No se ejecutan migraciones nuevas ni comandos destructivos sobre MariaDB.
+
+Suite completa final: **260 pruebas aprobadas, 1836 aserciones, 0 fallos** (`php artisan test`, 466.13 s). Git revisado después de la implementación y de actualizar esta documentación; sin commit. La inspección directa de MariaDB confirmó cero duplicados de slugs de producto/grupo, nombres normalizados de ingredientes, opciones por grupo, bloques por producto/orden, reglas por producto/código y parejas de composición/asignación.
+
+## Revalidación de la continuación — 22 de octubre de 2026
+
+Al retomar el encargo, los archivos de Batch04 y su carga real ya estaban presentes sin commit. Por tanto, los conteos 28 → 34 de la sección anterior describen la importación inicial; no son el estado inicial de esta revalidación. MariaDB estaba detenido y se inició la instalación existente de XAMPP con autorización, sin cambiar `.env` ni ejecutar migraciones.
+
+Se volvió a ejecutar el principal dos veces, ambas con código 0 y orden Batch01 → Batch02 → Batch03 → Batch04. Antes, después de la primera y después de la segunda ejecución: 34 productos, 5 categorías, 22 ingredientes, 26 promociones, 130 bloques, 28 grupos, 113 opciones y 479 reglas. Mi Favorita conserva ID 4 y Goloso ID 1 en los tres estados. Las huellas de IDs, valores comerciales y contenido histórico protegido coinciden antes/después; la consulta de duplicados devuelve cero en todas las identidades comprobadas.
+
+Se repitieron por separado las siete suites de la tabla anterior con los mismos resultados. La suite completa volvió a aprobar **260 pruebas y 1836 aserciones**, sin fallos (332.95 s). Build, Pint de los once archivos PHP de la fase y `git diff --check` aprobaron; `migrate:status` muestra 45 migraciones aplicadas y `route:list` muestra 58 rutas.
+
+La interfaz actual impide elegir un segundo Salmón deshabilitando esa opción al llegar al máximo; el rechazo de un payload manipulado permanece cubierto por Batch04Test. El guion antiguo de navegador esperaba un error después de hacer clic en esa opción y agotó su espera porque ahora el clic está impedido. Se utilizó el guion correspondiente a los controles actuales para comprobar las restricciones y los productos, sin cambiar el frontend para satisfacer el guion antiguo.
+
+Chrome local terminó con código 0: cuatro Nikkei a $6990, composición y Almendras visibles sin selección de proteína, AkilaBurger con elección obligatoria a $7500 tanto Salmón como Palta, dos bloques de 20 piezas y límite de Salmón, Mi Favorita/Goloso con composición fija y salsas incluidas, adicionales de soya/agridulce con sus importes. El guion anterior alcanzó a confirmar Pollo/Pollo a $10000 antes de su espera incompatible. El guion actual confirmó además carrito y vista móvil a 375/390/430 px sin desbordamiento, con cero excepciones JavaScript. No se generaron pedidos ni pagos. No se cargaron fotos 41–42 ni se hizo commit.
+
+# Batch 05 — Fotos 41 y 42
+
+## Fuente y alcance
+
+Se utiliza la transcripción escrita completa del encargo de Fase 5/5, recibida en dos mensajes. No se deducen recetas de la apariencia de fotografías ni se afirma haber recibido los archivos de imagen originales. Se incorporan exactamente tres productos, dos categorías y un ingrediente. Se reutilizan MenuBatchImporter, MenuIdentity, opciones/grupos, cotizador, carrito y snapshot v2; no hay migraciones ni nuevo motor comercial.
+
+El principal ejecuta Batch01 → Batch02 → Batch03 → Batch04 → Batch05, en una transacción. El importador admite ahora activo explícito, tipo de selección y límites de grupos definidos por datos; las asignaciones de producto respetan esos límites. Los lotes previos conservan sus límites y valores. Batch04Test se acota explícitamente a los cuatro primeros lotes, manteniendo sus aserciones de fase. Batch05Test verifica el principal completo y su idempotencia.
+
+## Productos
+
+| Foto | Producto / slug | Categoría | Precio CLP | Unidad y estado |
+|---|---|---|---:|---|
+| 41 | Arrollados / arrollados | Acompañamientos / acompanamientos | 5000.00 | 8 unidades, activo |
+| 42 | Gohan Flecha / gohan-flecha | Gohan / gohan | 7500.00 | Una presentación, inactivo |
+| 42 | Gohan Orion / gohan-orion | Gohan / gohan | 7500.00 | Una presentación, inactivo |
+
+Los Gohan usan unidad_tipo=unidad y unidades=1 como una presentación comercial, sin afirmar cantidades físicas, cortes ni gramajes. Ninguno de los tres productos crea bloques artificiales o entidades Promocion. Acompañamientos tiene orden 6 y Gohan orden 7.
+
+## Arrollados y mixtos
+
+Grupo `sabor-arrollados`, nombre Sabores, selección multiple obligatoria: mínimo uno y máximo dos. Opciones comerciales Primavera y Jamón Queso, sin ingrediente_id y sin recargo. No se crean ingredientes físicos con esos nombres, una base de sushi supuesta ni recetas de sus rellenos.
+
+Primavera cuesta $5000; Jamón Queso cuesta $5000; ambos sabores cuestan $5000. Ambos se guardan como selección mixta (`mixto=true`) junto con los nombres y sus IDs en el detalle/snapshot. No hay cantidades por sabor ni reparto obligatorio 4+4; la proporción queda a criterio operativo/manual hasta contar con fuente específica. Un solo sabor queda con mixto=false. El servidor rechaza ausencia de sabor, duplicados, más de dos opciones, opciones ajenas e inactivas, e ignora precios enviados por el cliente.
+
+El modal reutiliza los controles checkbox existentes a nivel producto, muestra 8 unidades y ningún Roll 1…8. El resumen compartido muestra la cantidad comercial incluida también en productos sin bloques y presenta «Sabores (Mixto): Primavera, Jamón Queso» en carrito, checkout y detalle histórico/PDF. Se conserva el contrato de configuración v2 y su hash canónico; los nombres y la marca de mixto son detalle legible adicional, no una nueva identidad ni precio del cliente.
+
+## Gohan: base confirmada y pendientes
+
+Ambos tienen únicamente Arroz, Queso crema, Ciboulette, Palta y Sésamo como composición confirmada. Arroz es el único ingrediente nuevo, tipo base. Los demás reutilizan sus identidades y clasificaciones existentes; por ejemplo Ciboulette/Sésamo siguen siendo topping, aun formando parte de esta base comercial. cantidad/unidad físicas quedan NULL; no se agregan pollo, camarón, salmón, nori ni gramajes.
+
+Los dos productos permanecen **inactivos**, con el texto «Pendiente de confirmar ingrediente/proteína diferencial». «Disponible opción vegetariana» queda en descripción y metadata descriptiva del pivote de su base Arroz (`opcion_vegetariana.disponible=true`, estado pendiente_definicion_operativa). No es una regla ejecutable: no reemplaza, elimina o agrega ingredientes, no crea opción seleccionable ni genera recargo. La composición diferencial y el procedimiento/precio vegetariano requieren confirmación operativa antes de activar la venta.
+
+## Disponibilidad pública y administración
+
+La documentación anterior señalaba que activo no estaba conectado a todas las consultas públicas; el modal y el cotizador comercial ya lo validaban, pero el listado público no lo filtraba. Se añade scope local `Producto::disponible()` para productos activos de categorías activas, utilizado en carta y lecturas de portada, sin global scope ni filtro en administración/historia. El cotizador verifica disponibilidad también en su rama legacy, de modo que ocultar una tarjeta no es la única protección.
+
+Los Gohan existen y son consultables en administración; la carta los excluye, su modal devuelve 404 y quote/add devuelve 422 aunque se envíe activo=true desde el navegador. La prueba de disponibilidad incluye productos legacy inactivos, categorías inactivas, portada/carta y acceso administrativo autenticado, preservando productos activos y acceso histórico.
+
+## Carga real e idempotencia
+
+Se capturó el estado de MariaDB antes de la carga y se ejecutó `php artisan db:seed --class=SushiAkilaMenuSeeder` dos veces. Ambas ejecuciones terminaron con código 0 y los cinco lotes en orden.
+
+| Tabla | Antes | Primera ejecución | Segunda ejecución |
+|---|---:|---:|---:|
+| productos | 34 | 37 | 37 |
+| categorias | 5 | 7 | 7 |
+| ingredientes | 22 | 23 | 23 |
+| promociones | 26 | 26 | 26 |
+| ingrediente_producto | 156 | 166 | 166 |
+| grupos_opciones | 28 | 29 | 29 |
+| opciones | 113 | 115 | 115 |
+| grupo_opcion_producto | 28 | 29 | 29 |
+| bloques_promocion | 130 | 130 | 130 |
+| bloque_grupo_opcion | 187 | 187 | 187 |
+| reglas_promocion | 479 | 479 | 479 |
+| users / orders / order_items | 1 / 1 / 1 | 1 / 1 / 1 | 1 / 1 / 1 |
+
+IDs observados: Arrollados 35, Gohan Flecha 36, Gohan Orion 37; no son constantes de la carga. Los 34 IDs anteriores se conservaron. Primera/segunda ejecución tienen huellas idénticas de IDs (`0e781f1529dbdad3cf17cf6e12ed8a3936f918e7ecba2e3be6250df0c650f5e1`) y valores comerciales sin timestamps (`c84bd241a3665696d23c88b5f88063808770ad867a707e63ab2e9ada5a2d5656`). La huella de contenido completo de usuarios/pedidos/líneas es idéntica antes y después. No se reescriben snapshots ni importes históricos.
+
+La inspección SQL confirmó cero duplicados de slugs, grupos/opciones, posiciones de bloque, reglas por código y asignaciones/composición. La normalización de ingredientes también devuelve cero duplicados. Hay 35 productos públicamente disponibles y dos inactivos; Primavera/Jamón Queso no existen como ingredientes.
+
+## Comprobación local
+
+Chrome local mediante CDP, con captura de escritorio y móvil: Arrollados muestra 8 unidades y sus dos sabores; cada sabor individual y ambos juntos cotizan $5000 sin recargo. El carrito conserva «Sabores (Mixto): Primavera, Jamón Queso», sin cantidades inventadas. No hay rolls artificiales, desbordamiento a 390 px ni excepciones JavaScript. Los Gohan no aparecen como tarjetas y sus accesos directos a modal/quote/add devuelven 404/422/422. No se crean pedidos o pagos reales; checkout y snapshot mixto se verifican en SQLite aislado y con Mercado Pago simulado. La visibilidad administrativa autenticada se verifica en la prueba de integración de Batch05.
+
+## Archivos de esta fase
+
+Nuevos: `database/seeders/SushiAkila/Batch05Data.php`, `database/seeders/SushiAkilaMenuBatch05Seeder.php`, `tests/Feature/SushiAkilaMenuBatch05Test.php`.
+
+Modificados: `SushiAkilaMenuSeeder.php`, `MenuBatchImporter.php`, `app/Models/Producto.php`, `app/Http/Controllers/ProductoController.php`, `ProductPricingService.php`, `PromotionRuleEvaluator.php`, `MenuConfigurationService.php`, `resources/views/home.blade.php`, `resources/views/components/menu-selection-summary.blade.php`, `SushiAkilaMenuBatch04Test.php` y este documento. Los cambios anteriores de otras fases se conservan. OrderItemSnapshotService y servicios de Mercado Pago mantienen su implementación.
+
+## Validaciones de Batch05
+
+Las ocho suites se ejecutaron por separado y terminaron con código 0, usando SQLite en memoria con las extensiones habilitadas solo para el proceso. No se modificó `.env` ni se cargaron fixtures en MariaDB.
+
+| Comprobación | Pruebas aprobadas | Aserciones |
+|---|---:|---:|
+| CommerceSecurityTest | 59 | 183 |
+| MenuArchitectureTest | 33 | 98 |
+| SushiAkilaMenuBatch01Test | 15 | 241 |
+| SushiAkilaMenuBatch02Test | 22 | 373 |
+| SushiAkilaMenuBatch03Test | 38 | 252 |
+| SushiAkilaMenuBatch04Test | 34 | 409 |
+| SushiAkilaMenuBatch05Test | 14 | 219 |
+| MenuCommercialIntegrationTest | 31 | 186 |
+
+Batch05Test cubre carga exacta, identidades previas y valores tras dos ejecuciones del principal, sabores sin ingredientes físicos, unidad comercial, tres combinaciones a precio calculado por servidor, selección mixta en snapshot, hash independiente del orden, ausencia/exceso/duplicados/opciones ajenas o inactivas, base y notas vegetarianas de Gohan, imposibilidad de comprarlos, consultas públicas/admin, checkout simulado y conservación histórica del snapshot/PDF.
+
+`npm run build` aprobó (66 módulos; mismos assets que antes de Batch05). Pint de los once archivos PHP de esta fase aprobó. `migrate:status`: 45 aplicadas, sin pendientes; `route:list`: 58 rutas. No se ejecutaron migraciones ni comandos destructivos. `git diff --check` y estado Git revisados; cambios sin commit.
+
+Suite completa final: **274 pruebas aprobadas, 2055 aserciones, cero fallos** (`php artisan test`, 273.50 s, código 0). Se mantienen las pruebas de seguridad, arquitectura e integración comercial sin alterar sus aserciones para ocultar regresiones. La carga real conserva las 479 reglas previas, sin añadir reglas ejecutables ficticias para sabores o vegetarianos.
+
+# Resumen de importación completa
+
+| Lote | Fotos | Productos nuevos | Total acumulado |
+|---|---|---:|---:|
+| Batch01 | 1–10 | 12 | 12 |
+| Batch02 | 11–20 | 8 | 20 |
+| Batch03 | 21–30 | 8 | 28 |
+| Batch04 | 31–40 | 6 | 34 |
+| Batch05 | 41–42 | 3 | 37 |
+
+Las 42 fichas lógicas quedaron procesadas según sus transcripciones; las repetidas confirman identidades y las generales se representan como configuración, no productos ficticios. Resultado: 37 productos (35 activos y 2 Gohan pendientes), 7 categorías y 23 ingredientes. Las categorías son Promociones, Promociones a elección, Hand Rolls, Especialidades, Nikkei, Acompañamientos y Gohan.
+
+Siguen pendientes la composición diferencial/variante vegetariana de Gohan, proporción de mixtos, envolturas Nikkei no confirmadas, salsas para 150 piezas, tarifa exterior y ambigüedades documentadas de fases anteriores. Este resumen no constituye una auditoría profunda ni confirma recetas que las fuentes no declaran. Sin inventario, gramajes, imágenes adicionales, modificaciones de `.env`, comandos destructivos ni commit.

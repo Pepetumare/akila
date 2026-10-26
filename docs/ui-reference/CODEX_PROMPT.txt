@@ -1,0 +1,39 @@
+Lee primero `docs/ui-reference/README.md` y analiza visualmente ambas imágenes PNG dentro de `docs/ui-reference/`.
+
+Tu objetivo no es hacer un rediseño libre. Debes adaptar la interfaz real de Sushi Akila para que la carta, las cards y los modales se parezcan claramente a las referencias visuales suministradas, manteniendo al mismo tiempo toda la lógica comercial, reglas, precios, validaciones y estructura de datos reales del proyecto.
+
+Antes de modificar código:
+1. compara las referencias con `/menu` actual;
+2. identifica diferencias visuales concretas;
+3. identifica qué componentes Blade/JS/CSS controlan cada diferencia;
+4. reproduce el bug de scroll/área blanca del modal;
+5. documenta la causa técnica exacta.
+
+REGLA CRÍTICA: las referencias visuales contienen imágenes y contenido demostrativo. NO copies productos, precios, imágenes o datos ficticios desde las referencias. Los datos reales de Laravel son la autoridad. Solo replica/adapta estructura visual, jerarquía, layout, interacción y comportamiento responsive.
+
+Debes implementar, como mínimo:
+- hero compacto;
+- chips de categorías;
+- grid uniforme;
+- cards con imagen/fallback, badge, categoría, nombre, metadata breve, precio y CTA;
+- eliminación de párrafos largos como contenido principal de card;
+- modal desktop con resumen a la izquierda y configuración a la derecha;
+- bloques como tarjetas/acordeones con estados Completo/Pendiente;
+- footer del modal siempre visible dentro del panel;
+- body interno del modal como único contenedor scrolleable;
+- responsive móvil equivalente a las referencias;
+- producto fijo con modal simplificado;
+- carrito/resumen visual coherente con referencias donde ya exista ese flujo;
+- corrección real del bug de salto/área blanca.
+
+No cambies lógica comercial, precios, seeders, reglas ni Mercado Pago.
+
+Después de implementar:
+- compara manualmente la interfaz resultante con cada referencia;
+- enumera qué partes lograste replicar y cuáles tuviste que adaptar por restricciones funcionales reales;
+- prueba 20, 30 y 60 piezas a elección;
+- prueba 5 Hand Rolls;
+- prueba Muchupleto, AkilaBurger, Arrollados y un producto fijo;
+- prueba desktop y 390x844;
+- ejecuta la suite completa, build, lint y `git diff --check`;
+- no hagas commit.

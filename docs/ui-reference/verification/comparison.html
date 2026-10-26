@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sushi Akila · Referencias e implementación real</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f1e9;color:#171c20;font:15px/1.6 system-ui,sans-serif}header{padding:24px 4vw;background:#0b1013;color:white}h1{font-size:25px;margin:0}header p{margin:6px 0 0;color:#cdd0d0}main{max-width:1500px;margin:auto;padding:24px}h2{font-size:21px}a{color:#bc1725}.pair{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;margin-bottom:32px}figure{margin:0;padding:12px;border:1px solid #ddd8ce;background:white;border-radius:12px}figcaption{font-weight:650;margin-bottom:12px}.crop{position:relative;overflow:hidden;background:#0b1013;border-radius:6px}.crop img{position:absolute;max-width:none;height:auto}.reference-menu{aspect-ratio:710/690}.reference-menu img{width:216.338%;left:0;top:0}.reference-modal{aspect-ratio:564/664}.reference-modal img{width:272.34%;left:-172.34%;top:0}.actual-modal{aspect-ratio:1140/790}.actual-modal img{width:126.316%;left:-13.158%;top:-3.038%}.screen{display:block;width:100%;height:auto;border-radius:6px}.phones{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:start}.phones img{width:100%;height:auto}.note{padding:14px;border-left:3px solid #ed1222;background:white}@media(max-width:800px){main{padding:16px}.pair,.phones{grid-template-columns:1fr}}
+</style>
+<header><h1>Referencias aprobadas e implementación real</h1><p>Comparación visual del 22 de octubre de 2026. Capturas de Chrome local; datos comerciales de Laravel.</p></header>
+<main>
+<p class="note">El diseño se compara directamente con ambas referencias. Las fotografías ilustrativas no se copiaron. El banner usa un asset local anterior; las cards y miniaturas sin fotografía usan el fallback. Los importes, categorías y selecciones de las capturas son reales.</p>
+<h2>Carta y cards</h2><div class="pair">
+<figure><figcaption>Referencia 02 · panel 1</figcaption><div class="crop reference-menu"><img src="../reference-02-detailed.png" alt="Página de carta de la referencia detallada"></div><a href="../reference-02-detailed.png">Abrir referencia completa</a></figure>
+<figure><figcaption>Aplicación real · escritorio</figcaption><a href="menu-desktop.png"><img class="screen" src="menu-desktop.png" alt="Carta implementada en Chrome"></a><p>Banner continuo, caja de categorías, resultados/orden, grid uniforme, precio y CTA alineados. El contenido sigue el orden real por nombre.</p></figure>
+</div>
+<h2>Personalización</h2><div class="pair">
+<figure><figcaption>Referencia 02 · panel 3</figcaption><div class="crop reference-modal"><img src="../reference-02-detailed.png" alt="Modal de personalización de referencia"></div></figure>
+<figure><figcaption>Aplicación real · 30 Piezas a Elección</figcaption><div class="crop actual-modal"><img src="modal-desktop.png" alt="Modal real configurado con cotización del servidor"></div><a href="modal-desktop.png">Ver captura completa</a><p>Columna de selección y salsas, progreso por bloques reales, tabs de ingredientes, opciones con check, estado completado y footer de compra. Envolturas opcionales plegables.</p></figure>
+</div>
+<h2>Móvil y tablet</h2><div class="phones">
+<figure><figcaption>Carta · 390×844</figcaption><a href="menu-mobile.png"><img src="menu-mobile.png" alt="Carta móvil"></a></figure>
+<figure><figcaption>Modal · 390×844</figcaption><a href="modal-mobile.png"><img src="modal-mobile.png" alt="Modal móvil"></a></figure>
+<figure><figcaption>Tablet · 1024×768</figcaption><a href="menu-tablet.png"><img src="menu-tablet.png" alt="Carta tablet"></a></figure>
+</div>
+<h2>Producto fijo y carrito</h2><div class="pair">
+<figure><figcaption>Noche de Sushi · composición real</figcaption><a href="fixed-desktop.png"><img class="screen" src="fixed-desktop.png" alt="Modal de producto fijo"></a></figure>
+<figure><figcaption>Carrito · cantidades y selecciones persistidas</figcaption><a href="cart-desktop.png"><img class="screen" src="cart-desktop.png" alt="Carrito real de pruebas"></a><a href="cart-mobile.png">Ver carrito móvil</a></figure>
+</div>
+<p><a href="../reference-01-overview.png">Referencia 01 completa</a> · <a href="../reference-02-detailed.png">Referencia 02 completa</a> · <a href="../../menu-ui-redesign.md">Documentación y validaciones</a></p>
+</main>
+</html>

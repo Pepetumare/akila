@@ -88,15 +88,16 @@ class MenuBatchImporter
             $this->group('envoltura-fija-'.Str::slug($name), 'Envoltura fija: '.$name, [$name]);
         }
         foreach ($this->groupDefinitions as $slug => $definition) {
-            $this->group($slug, $definition['nombre'], $definition['opciones'], $definition['recargo'] ?? '0.00');
+            $this->group($slug, $definition['nombre'], $definition['opciones'], $definition['recargo'] ?? '0.00', $definition);
         }
     }
 
-    private function group(string $slug, string $name, array $options, string $surcharge = '0.00'): GrupoOpcion
+    private function group(string $slug, string $name, array $options, string $surcharge = '0.00', array $definition = []): GrupoOpcion
     {
         $group = GrupoOpcion::updateOrCreate(['slug' => $slug], [
-            'nombre' => $name, 'tipo_seleccion' => 'single', 'min_selections' => 1,
-            'max_selections' => 1, 'activo' => true, 'orden' => count($this->groups) + 1,
+            'nombre' => $name, 'tipo_seleccion' => $definition['tipo_seleccion'] ?? 'single',
+            'min_selections' => $definition['min_selections'] ?? 1,
+            'max_selections' => $definition['max_selections'] ?? 1, 'activo' => true, 'orden' => count($this->groups) + 1,
         ]);
         foreach ($options as $index => $optionName) {
             $group->opciones()->updateOrCreate(['slug' => Str::slug($optionName)], [
@@ -122,7 +123,7 @@ class MenuBatchImporter
             'nombre' => $data['nombre'], 'descripcion' => $data['descripcion'], 'precio' => $data['precio'],
             'categoria_id' => $categories[isset($data['categoria']) ? Str::slug($data['categoria']) : ($custom ? 1 : 0)]->id,
             'tipo' => $data['tipo'] ?? TipoProducto::Promocion, 'personalizable' => $custom, 'unidades' => $quantity, 'unidad_tipo' => $unit,
-            'activo' => true, 'orden' => $data['orden'] ?? array_search($slug, array_keys($this->products), true) + 1,
+            'activo' => $data['activo'] ?? true, 'orden' => $data['orden'] ?? array_search($slug, array_keys($this->products), true) + 1,
             'rolls_total' => $unit === UnidadComercial::Pieza ? intdiv($quantity, 10) : 0,
             'rolls_fritos' => intdiv($data['preparacion']['frito'] ?? 0, 10),
             'rolls_envueltos' => intdiv($data['preparacion']['envuelto'] ?? 0, 10),
@@ -146,7 +147,9 @@ class MenuBatchImporter
         }
         $productAssignments = [];
         foreach ($data['grupos_producto'] ?? [] as $order => $groupSlug) {
-            $productAssignments[$this->groups[$groupSlug]->id] = $this->assignment($order + 1);
+            $group = $this->groups[$groupSlug];
+            $productAssignments[$group->id] = ['min_selections' => $group->min_selections,
+                'max_selections' => $group->max_selections, 'obligatorio' => $group->min_selections > 0, 'orden' => $order + 1];
         }
         $product->gruposOpciones()->syncWithoutDetaching($productAssignments);
         $this->rules($product, $slug, $data);
@@ -174,10 +177,11 @@ class MenuBatchImporter
                 $wrappers[$wrapper] = ($wrappers[$wrapper] ?? 0) + 10;
             }
         }
-        $names = array_unique(array_merge(Batch01Data::BASE, $data['composicion_fija'] ?? [], array_keys($fillings), array_keys($wrappers)));
+        $baseNames = $data['base'] ?? Batch01Data::BASE;
+        $names = array_unique(array_merge($baseNames, $data['composicion_fija'] ?? [], array_keys($fillings), array_keys($wrappers)));
         $sync = [];
         foreach ($names as $index => $name) {
-            $base = in_array($name, Batch01Data::BASE, true);
+            $base = in_array($name, $baseNames, true);
             $sync[$this->ingredients[$name]->id] = [
                 'cantidad' => null, 'unidad' => null,
                 // Legacy roll-count contract, never a physical kitchen quantity.

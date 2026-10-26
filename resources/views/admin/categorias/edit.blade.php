@@ -1,12 +1,5 @@
-@extends('layouts.app')
-
+@extends('admin.layout')
+@section('page-title','Categoría')
 @section('content')
-<div class="container mx-auto p-6">
-    <h2 class="text-2xl font-bold mb-4">Editar Categoría</h2>
-    <form action="{{ route('admin.categorias.update', $categoria) }}" method="POST">
-        @method('PUT')
-        @include('admin.categorias._form')
-        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Actualizar</button>
-    </form>
-</div>
+<form class="card form-card detail-page" method="post" action="{{ $categoria->exists ? route('admin.categorias.update',$categoria) : route('admin.categorias.store') }}">@csrf @if($categoria->exists) @method('PUT') @endif<h2>{{ $categoria->nombre ?: 'Nueva categoría' }}</h2><div class="form-grid"><label class="wide">Nombre<input name="nombre" required value="{{ old('nombre',$categoria->nombre) }}"></label><label>Orden<input name="orden" type="number" min="0" value="{{ old('orden',$categoria->orden ?? 0) }}"></label><label>Estado<select name="activo"><option value="1" @selected(old('activo',$categoria->activo ?? true))>Activa</option><option value="0" @selected(!old('activo',$categoria->activo ?? true))>Inactiva</option></select></label></div><p class="muted">El slug se genera desde el nombre. Desactivar oculta sus productos públicamente; no elimina su historial.</p><div class="form-footer"><a class="btn" href="{{ route('admin.categorias.index') }}">Volver</a><button class="btn primary">Guardar categoría</button></div></form>
 @endsection

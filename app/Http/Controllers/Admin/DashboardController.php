@@ -3,51 +3,34 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Ingrediente;
 use App\Models\Order;
 use App\Models\Producto;
-use App\Models\Categoria;
-use App\Models\Ingrediente;
-use App\Models\OrderItem;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Services\KitchenMetrics;
+use App\Services\KitchenWorkflow;
+use App\Services\OperationSettings;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(KitchenMetrics $metrics, OperationSettings $settings)
     {
-        // Totales básicos
-        $totalOrders     = Order::count();
-        $totalCategories = Categoria::count();
-        $totalIngredients = Ingrediente::count();
-        $totalProducts   = Producto::count();
+        $operation = $settings->get();
+        $today = Order::whereBetween('created_at', \App\Services\AdminClock::dayBounds());
+        $paid = (clone $today)->where('payment_status', 'approved');
+        $sales = (clone $paid)->sum('total');
+        $paidCount = (clone $paid)->count();
+        $ordersToday = (clone $today)->count();
+        $sold = $metrics->items((clone $paid)->with('items')->get()->flatMap->items);
+        $active = Order::whereIn('status', KitchenWorkflow::ACTIVE)->with('items')->oldest()->get();
+        $load = $metrics->items($active->flatMap->items);
+        $level = $load['pieces'] >= $operation['load_high'] ? 'Alta' : ($load['pieces'] >= $operation['load_medium'] ? 'Media' : 'Baja');
+        $products = Producto::where('activo', true)->count();
+        $ingredients = Ingrediente::count();
+        $unavailable = Ingrediente::where('is_available', false)->count();
+        $overdue = $active->filter(fn ($o) => $o->status === 'en preparación' && ($o->preparing_at ?? $o->created_at)->lt(now()->subMinutes($operation['overdue_minutes'])))->count();
+        $pendingPayments = $active->whereNotIn('payment_status', ['approved', 'refunded', 'charged_back', 'rejected', 'cancelled'])->count();
+        $chart = (clone $paid)->get(['created_at', 'total'])->groupBy(fn ($o) => $o->created_at->setTimezone(config('admin.timezone'))->format('H'))->map->sum('total');
 
-        // Ventas del día
-        $today           = now()->toDateString();
-        $salesToday      = Order::whereDate('created_at', $today)->sum('total');
-
-        // Pedidos por estado
-        $ordersByStatus = Order::select('status', DB::raw('count(*) as count'))
-            ->groupBy('status')
-            ->pluck('count', 'status');  // colección [ 'pendiente' => 5, 'entregado' => 10, … ]
-
-        // Top 5 productos por ingresos
-        $topProducts = OrderItem::select(
-            'product_id',
-            DB::raw('SUM(unidades * precio_unit) AS revenue')
-        )
-            ->groupBy('product_id')
-            ->orderByDesc('revenue')
-            ->limit(5)
-            ->get();
-
-        return view('admin.dashboard', compact(
-            'totalOrders',
-            'totalCategories',
-            'totalIngredients',
-            'totalProducts',
-            'salesToday',
-            'ordersByStatus',
-            'topProducts'
-        ));
+        return view('admin.dashboard', compact('operation', 'sales', 'paidCount', 'ordersToday', 'sold', 'active', 'load', 'level', 'products', 'ingredients', 'unavailable', 'overdue', 'pendingPayments', 'chart'));
     }
 }

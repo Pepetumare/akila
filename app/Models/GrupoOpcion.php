@@ -14,11 +14,11 @@ class GrupoOpcion extends Model
 {
     protected $table = 'grupos_opciones';
 
-    protected $fillable = ['nombre', 'slug', 'tipo_seleccion', 'min_selections', 'max_selections', 'activo', 'orden'];
+    protected $fillable = ['nombre', 'slug', 'tipo_seleccion', 'min_selections', 'max_selections', 'activo', 'orden', 'catalog_policy'];
 
     protected $attributes = ['tipo_seleccion' => 'single', 'min_selections' => 0, 'max_selections' => 1, 'activo' => true, 'orden' => 0];
 
-    protected $casts = ['min_selections' => 'integer', 'max_selections' => 'integer', 'activo' => 'boolean', 'orden' => 'integer'];
+    protected $casts = ['min_selections' => 'integer', 'max_selections' => 'integer', 'activo' => 'boolean', 'orden' => 'integer', 'catalog_policy' => 'array'];
 
     protected static function booted(): void
     {

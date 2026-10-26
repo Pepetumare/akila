@@ -1,238 +1,60 @@
 @extends('layouts.app')
-
+@section('title', 'Tu carrito')
 @section('content')
-    @php
-        $cart = session('cart', []);
-        $total = collect($cart)->sum('total');
-    @endphp
-
-    <div class="container mx-auto p-6">
-        @if ($errors->any())
-            <div role="alert">{{ $errors->first() }}</div>
-        @endif
-        <h2 class="text-2xl font-bold mb-6">Tu Carrito</h2>
-
-        {{-- Flash --}}
-        @if (session('success'))
-            <div class="mb-4 p-3 rounded bg-green-100 text-green-700">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if (empty($cart))
-            <p class="text-gray-600">No hay productos en el carrito.</p>
-            <a href="{{ route('menu') }}" class="inline-block mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-                Seguir comprando
-            </a>
-        @else
-            {{-- Rolls DESKTOP TABLE --}}
-            <div class="hidden md:block">
-                <table class="w-full text-sm border">
-                    <thead class="bg-gray-200 text-gray-700">
-                        <tr>
-                            <th class="p-3 text-left">Producto</th>
-                            <th class="p-3 text-center">Cant.</th>
-                            <th class="p-3 text-left">Detalles</th>
-                            <th class="p-3 text-right">Subtotal</th>
-                            <th class="p-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($cart as $line)
-                            @php
-                                $d = $line['detalle'];
-
-                                // Agrupamos Proteínas y Vegetales
-                                $proteCounts = collect($d['Proteínas'] ?? [])
-                                    ->countBy()
-                                    ->map(fn($qty, $name) => "{$qty} {$name}")
-                                    ->values()
-                                    ->all();
-
-                                $vegCounts = collect($d['Vegetales'] ?? [])
-                                    ->countBy()
-                                    ->map(fn($qty, $name) => "{$qty} {$name}")
-                                    ->values()
-                                    ->all();
-                            @endphp
-
-                            <tr class="border-b">
-                                {{-- Producto --}}
-                                <td class="p-3">
-                                    <div class="font-semibold">{{ $line['nombre'] }}</div>
-                                    <div class="text-xs text-gray-500">
-                                        Precio unidad:
-                                        ${{ number_format($line['precio_unit'], 0, ',', '.') }}
-                                    </div>
-                                </td>
-
-                                {{-- Cantidad + update --}}
-                                <td class="p-3 text-center">
-                                    <form action="{{ route('cart.update') }}" method="POST"
-                                        class="inline-flex items-center gap-1">
-                                        @csrf
-                                        <input type="hidden" name="hash" value="{{ $line['hash'] }}">
-                                        <input type="number" name="unidades" value="{{ $line['unidades'] }}" min="1"
-                                            class="w-16 border rounded px-1 py-0.5 text-center"
-                                            onchange="this.form.submit()">
-                                        <button type="submit" class="text-blue-500" title="Actualizar">
-                                            ⟳
-                                        </button>
-                                    </form>
-                                </td>
-
-                                {{-- Rolls Detalles --}}
-                                <td class="p-3">
-                                    @if(isset($d['Bloques']))
-                                        <x-menu-selection-summary :detail="$d" />
-                                    @else
-                                    <ul class="list-disc list-inside space-y-1">
-                                        <li>
-                                            <strong>Base:</strong>
-                                            {{ $d['Base'] ?? '—' }}
-                                        </li>
-                                        <li>
-                                            <strong>Proteínas:</strong>
-                                            {{ $proteCounts ? implode(', ', $proteCounts) : '—' }}
-                                        </li>
-                                        <li>
-                                            <strong>Vegetales:</strong>
-                                            {{ $vegCounts ? implode(', ', $vegCounts) : '—' }}
-                                        </li>
-                                        @if ($d['Sin queso'] ?? false)
-                                            <li>Sin queso crema</li>
-                                        @endif
-                                        @if ($d['Sin cebollín'] ?? false)
-                                            <li>Sin cebollín</li>
-                                        @endif
-                                    </ul>
-                                    @endif
-                                </td>
-
-                                {{-- Subtotal --}}
-                                <td class="p-3 text-right font-bold">
-                                    ${{ number_format($line['total'], 0, ',', '.') }}
-                                </td>
-
-                                {{-- Eliminar --}}
-                                <td class="p-3 text-center">
-                                    <form action="{{ route('cart.remove') }}" method="POST">
-                                        @csrf
-                                        <input type="hidden" name="hash" value="{{ $line['hash'] }}">
-                                        <button class="text-red-600 hover:text-red-800" title="Eliminar">✕</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            {{-- MOBILE CARDS --}}
-            <div class="md:hidden space-y-4">
-                @foreach ($cart as $line)
+<div class="akila-cart">
+    <header class="akila-cart-heading"><div><p class="akila-eyebrow">TU ELECCIÓN AKILA</p><h1>Tu carrito <span>({{ collect($cart)->sum('unidades') }})</span></h1></div><a href="{{ route('menu') }}">Seguir comprando →</a></header>
+    @if($errors->any())<div class="akila-cart-notice" role="alert">{{ $errors->first() }}</div>@endif
+    @if(session('success'))<p class="akila-cart-notice" role="status">{{ session('success') }}</p>@endif
+    @if(empty($cart))
+        <div class="akila-menu-empty"><h2>Tu carrito está vacío</h2><p>Explora nuestra carta y encuentra tu próximo favorito.</p><a class="akila-card-cta is-customizable" href="{{ route('menu') }}">Ver la carta →</a></div>
+    @else
+        <div class="akila-cart-layout">
+            <div class="akila-cart-items">
+                @foreach($cart as $line)
                     @php
-                        $d = $line['detalle'];
-
-                        $proteCounts = collect($d['Proteínas'] ?? [])
-                            ->countBy()
-                            ->map(fn($qty, $name) => "{$qty} Rolls de {$name}")
-                            ->values()
-                            ->all();
-
-                        $vegCounts = collect($d['Vegetales'] ?? [])
-                            ->countBy()
-                            ->map(fn($qty, $name) => "{$qty} Rolls de {$name}")
-                            ->values()
-                            ->all();
+                        $detail = $line['detalle'];
+                        $commercialUnit = \App\Enums\UnidadComercial::tryFrom($detail['Unidad comercial'] ?? '');
                     @endphp
-
-                    <div class="border rounded-lg p-4 shadow-sm">
-                        <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <h3 class="font-semibold">{{ $line['nombre'] }}</h3>
-                                <span class="text-xs text-gray-500">
-                                    x
-                                    <form action="{{ route('cart.update') }}" method="POST" class="inline">
-                                        @csrf
-                                        <input type="hidden" name="hash" value="{{ $line['hash'] }}">
-                                        <input type="number" name="unidades" value="{{ $line['unidades'] }}"
-                                            min="1" class="w-12 border rounded px-1 py-0.5 text-center"
-                                            onchange="this.form.submit()">
-                                    </form>
-                                </span>
+                    <article class="akila-cart-item">
+                        <x-store.catalog-image :path="$images->get($line['producto_id'])" :alt="$line['nombre']" class="akila-cart-image" />
+                        <div class="akila-cart-item-info">
+                            <h2>{{ $line['nombre'] }}</h2>
+                            @if($commercialUnit)<p class="akila-cart-quantity">{{ $detail['Cantidad incluida'] }} {{ $commercialUnit->label((int) $detail['Cantidad incluida']) }} por producto</p>@endif
+                            <div class="akila-cart-choices">
+                                @foreach(array_slice($detail['Bloques'] ?? [], 0, 3) as $block)
+                                    <p><x-store.icon name="portion" /><span><strong>{{ $block['etiqueta'] ?? 'Unidad '.$loop->iteration }}:</strong> {{ collect($block['grupos'])->flatMap(fn ($group) => array_column($group['opciones'], 'nombre'))->implode(' · ') }}</span></p>
+                                @endforeach
+                                @foreach($detail['Grupos'] ?? [] as $group)
+                                    @if($group['opciones'])<p><x-store.icon name="ingredient" /><span><strong>{{ $group['nombre'] }}{{ ($group['mixto'] ?? false) ? ' (Mixto)' : '' }}:</strong> {{ collect($group['opciones'])->pluck('nombre')->implode(', ') }}</span></p>@endif
+                                @endforeach
                             </div>
-                            <form action="{{ route('cart.remove') }}" method="POST">
+                            <details class="akila-cart-detail"><summary>Ver composición y configuración completa</summary>
+                                @if(isset($detail['Bloques']))<x-menu-selection-summary :detail="$detail" />@else
+                                    <p><strong>Base:</strong> {{ $detail['Base'] ?? '—' }}</p>
+                                    @foreach(['Proteínas', 'Vegetales'] as $type)@if(!empty($detail[$type]))<p><strong>{{ $type }}:</strong> {{ implode(', ', $detail[$type]) }}</p>@endif @endforeach
+                                    @if($detail['Sin queso'] ?? false)<p>Sin queso crema</p>@endif
+                                    @if($detail['Sin cebollín'] ?? false)<p>Sin cebollín</p>@endif
+                                @endif
+                            </details>
+                        </div>
+                        <div class="akila-cart-item-actions">
+                            <strong class="akila-cart-line-total">${{ number_format($line['total'], 0, ',', '.') }}</strong>
+                            <small>${{ number_format($line['precio_unit'], 0, ',', '.') }} por producto</small>
+                            <form action="{{ route('cart.update') }}" method="POST" class="akila-cart-update">
                                 @csrf
                                 <input type="hidden" name="hash" value="{{ $line['hash'] }}">
-                                <button class="text-red-600 text-lg leading-none">✕</button>
+                                <button type="submit" name="unidades" value="{{ $line['unidades'] - 1 }}" @disabled($line['unidades'] <= 1) aria-label="Reducir cantidad de {{ $line['nombre'] }}">−</button>
+                                <span aria-label="Cantidad: {{ $line['unidades'] }}">{{ $line['unidades'] }}</span>
+                                <button type="submit" name="unidades" value="{{ $line['unidades'] + 1 }}" @disabled($line['unidades'] >= \App\Services\ProductPricingService::MAX_QUANTITY) aria-label="Aumentar cantidad de {{ $line['nombre'] }}">+</button>
                             </form>
+                            <form action="{{ route('cart.remove') }}" method="POST">@csrf<input type="hidden" name="hash" value="{{ $line['hash'] }}"><button type="submit" class="akila-cart-remove" aria-label="Eliminar {{ $line['nombre'] }}"><x-store.icon name="trash" /> Eliminar</button></form>
                         </div>
-
-                        @if(isset($d['Bloques']))
-                            <x-menu-selection-summary :detail="$d" />
-                        @else
-                        <ul class="text-sm text-gray-700 space-y-1 mb-2">
-                            <li>
-                                <strong>Base:</strong>
-                                {{ $d['Base'] ?? '—' }}
-                            </li>
-                            <li>
-                                <strong>Prot.:</strong>
-                                {{ $proteCounts ? implode(', ', $proteCounts) : '—' }}
-                            </li>
-                            <li>
-                                <strong>Veg.:</strong>
-                                {{ $vegCounts ? implode(', ', $vgCounts ?? $vegCounts) : '—' }}
-                            </li>
-                            @if ($d['Sin queso'] ?? false)
-                                <li>Sin queso crema</li>
-                            @endif
-                            @if ($d['Sin cebollín'] ?? false)
-                                <li>Sin cebollín</li>
-                            @endif
-                        </ul>
-                        @endif
-
-                        <div class="text-right font-bold">
-                            ${{ number_format($line['total'], 0, ',', '.') }}
-                        </div>
-                    </div>
+                    </article>
                 @endforeach
+                <form action="{{ route('cart.clear') }}" method="POST" class="akila-cart-clear">@csrf<button type="submit">Vaciar carrito</button></form>
             </div>
-
-            {{-- ACCIONES GENERALES --}}
-            <div class="mt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                {{-- Vaciar --}}
-                <form action="{{ route('cart.clear') }}" method="POST">
-                    @csrf
-                    <button class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
-                        Vaciar carrito
-                    </button>
-                </form>
-
-                {{-- Total --}}
-                <div class="text-xl font-extrabold">
-                    Total: ${{ number_format($total, 0, ',', '.') }} CLP
-                </div>
-
-                {{-- Checkout --}}
-                <a href="{{ route('checkout.index') }}"
-                    class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 text-center">
-                    Ir a pagar
-                </a>
-            </div>
-        @endif
-    </div>
-
-    @push('scripts')
-        <script>
-            // Envía al perder foco (desktop fallback)
-            document.querySelectorAll('input[name="unidades"]').forEach(inp => {
-                inp.addEventListener('blur', e => {
-                    if (e.target.form) e.target.form.submit();
-                });
-            });
-        </script>
-    @endpush
+            <aside class="akila-cart-checkout" aria-label="Resumen del carrito"><h2>Resumen de tu pedido</h2><div><span>Subtotal</span><strong>${{ number_format($total, 0, ',', '.') }} <small>CLP</small></strong></div><p>El costo de entrega se confirma en el siguiente paso.</p><a href="{{ route('checkout.index') }}" class="akila-card-cta is-customizable">Ir a pagar →</a></aside>
+        </div>
+    @endif
+</div>
 @endsection

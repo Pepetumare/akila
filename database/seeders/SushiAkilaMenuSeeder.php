@@ -14,6 +14,8 @@ class SushiAkilaMenuSeeder extends Seeder
             SushiAkilaMenuBatch01Seeder::class,
             SushiAkilaMenuBatch02Seeder::class,
             SushiAkilaMenuBatch03Seeder::class,
+            SushiAkilaMenuBatch04Seeder::class,
+            SushiAkilaMenuBatch05Seeder::class,
         ]));
     }
 }

@@ -13,25 +13,31 @@ class CartController extends Controller
     {
         $cart = session('cart', []);
         $total = array_sum(array_column($cart, 'total'));
+        // One projection for thumbnails; historical labels and amounts stay in the cart.
+        $images = Producto::whereIn('id', array_column($cart, 'producto_id'))->pluck('imagen', 'id');
 
-        return view('cart.index', compact('cart', 'total'));
+        return view('cart.index', compact('cart', 'total', 'images'));
     }
 
     public function quote(Request $request, ProductPricingService $pricing)
     {
         $data = $request->validate(['product_id' => 'required|integer|exists:productos,id', 'unidades' => 'sometimes|integer|min:1|max:50']);
 
-        return response()->json(['valid' => true] + $pricing->quote(Producto::findOrFail($data['product_id']), $request->all(), (int) ($data['unidades'] ?? 1)))->header('Cache-Control', 'no-store');
+        $quote = $pricing->quoteResult(Producto::findOrFail($data['product_id']), $request->all(), (int) ($data['unidades'] ?? 1));
+
+        return response()->json(['valid' => true] + $pricing->toArray($quote))->header('Cache-Control', 'no-store');
     }
 
     public function add(Request $request, ProductPricingService $pricing)
     {
         $data = $request->validate(['product_id' => 'required|integer|exists:productos,id', 'unidades' => 'required|integer|min:1|max:50']);
         $product = Producto::findOrFail($data['product_id']);
-        $line = $pricing->quote($product, $request->all(), (int) $data['unidades']);
+        $quote = $pricing->quoteResult($product, $request->all(), (int) $data['unidades']);
+        $line = $pricing->toArray($quote);
         $cart = session('cart', []);
         if (isset($cart[$line['hash']])) {
-            $line = $pricing->quote($product, $line['configuration'], $line['unidades'] + $cart[$line['hash']]['unidades']);
+            $quote = $pricing->quoteResult($product, $line['configuration'], $line['unidades'] + $cart[$line['hash']]['unidades']);
+            $line = $pricing->toArray($quote);
         }
         if (count($cart) >= 100 && ! isset($cart[$line['hash']])) {
             throw ValidationException::withMessages(['cart' => 'Máximo 100 configuraciones por carrito.']);
